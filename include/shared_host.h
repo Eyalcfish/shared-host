@@ -23,6 +23,10 @@ typedef enum {
 
     SH_ERR_MESSAGE_TOO_LONG = -4, // write: occurs when trying to write a message that exceeds the maximum allowed message size.
     SH_ERR_CONNECTION_CLOSED = -5, // write/read: occurs when trying to write to or read from a connection that has been closed. connect: occurs when trying to connect to a closed connection.
+
+    SH_ERR_INVALID_PARAMETER = -6, // occurs when passing invalid parameters to any function, such as a null pointer or an invalid buffer size.
+
+    SH_ERR_UNKNOWN = -100 // an unknown error occurred, this is a catch-all for errors that don't fit into the other categories.
 } sh_result_t;
 
 typedef struct shared_host_connection shared_host_connection;
