@@ -43,13 +43,13 @@ sh_result_t create_shared_host_connection(const char* port, size_t size, shared_
 
 sh_result_t connect_to_shared_host_connection(const char* port, shared_host_connection** out_connection);
 
-sh_result_t peek_shared_host_connection(shared_host_connection* connection, void** buffer, size_t* buffer_size);
-
-sh_result_t stop_peeking_shared_host_connection(shared_host_connection* connection);
-
 sh_result_t claim_ownership_of_shared_host_connection(shared_host_connection* connection, void** buffer);
 
 sh_result_t send_package_to_shared_host_connection(shared_host_connection* connection, void** buffer);
+
+sh_result_t peek_shared_host_connection(shared_host_connection* connection, void** buffer, size_t* buffer_size);
+
+sh_result_t stop_peeking_shared_host_connection(shared_host_connection* connection);
 
 sh_result_t clear_shared_host_connection(shared_host_connection* connection);
 
