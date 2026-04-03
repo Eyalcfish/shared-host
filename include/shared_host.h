@@ -5,6 +5,7 @@
 
 #ifdef _WIN32
     #include <basetsd.h>
+    #include <windows.h>
     typedef SSIZE_T ssize_t;
 #else
     #include <sys/types.h>

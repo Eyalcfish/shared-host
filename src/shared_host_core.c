@@ -1,5 +1,5 @@
 #include <shared_host.h>
-#include "shm_mapping.h"
+#include "internal/shm_mapping.h"
 
 #ifdef _WIN32
     #include <windows.h>

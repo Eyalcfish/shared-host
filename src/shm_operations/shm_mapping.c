@@ -1,4 +1,4 @@
-#include "shm_mapping.h"
+#include "internal/shm_mapping.h"
 #include "shared_host.h"
 
 #ifdef _WIN32
@@ -15,7 +15,7 @@ sh_result_t sh_create_shared_memory(const char* port, size_t size, HANDLE* out_h
     DWORD32 dwSizeLow = (DWORD32)(size & 0xFFFFFFFF);
     DWORD32 dwSizeHigh = (DWORD32)(size >> 32);
 
-    HANDLE hMapFile = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, dwSizeHigh, dwSizeLow, port);
+    *out_handle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, dwSizeHigh, dwSizeLow, port);
 
     switch (GetLastError()) {
         case ERROR_ALREADY_EXISTS:
@@ -28,9 +28,9 @@ sh_result_t sh_create_shared_memory(const char* port, size_t size, HANDLE* out_h
             break;
     }
 
-    void* ptr = MapViewOfFile(hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+    *ptr = MapViewOfFile(*out_handle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
 
-    if (ptr == NULL) { // safety check
+    if (*ptr == NULL) { // safety check
         return SH_ERR_UNKNOWN;
     }
     #endif
