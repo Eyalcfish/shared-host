@@ -97,5 +97,35 @@ sh_result_t send_package_to_shared_host_connection(shared_host_connection* conne
     atomic_store(&model->has_data, 1);
     atomic_store(&model->owned, 0);
 
+    return SH_OK;
+}
+
+sh_result_t peek_shared_host_connection(shared_host_connection* connection, void** buffer, size_t* buffer_size) {
+    communication_model* model = (communication_model*)connection->ptr;
+
+    if (atomic_load(&model->has_data) == 0) {
+        return SH_OK; // NEED TO CREATE A SEPERATE ERROR
+    }
+
+    size_t peeked = atomic_fetch_add(&model->peeking, 1);
+
+    *buffer = connection->ptr+sizeof(communication_model);
+    *buffer_size = model->capacity;
+
+    atomic_store(&model->owned, 1);
+
+    return SH_OK;
+}
+
+sh_result_t stop_peeking_shared_host_connection(shared_host_connection* connection) {
+    communication_model* model = (communication_model*)connection->ptr;
+
+    atomic_fetch_sub(&model->peeking, 1);
+
+    if (atomic_load(&model->peeking) == 0) {
+        atomic_store(&model->owned, 0);
+    }
+
+    return SH_OK;
 }
 
