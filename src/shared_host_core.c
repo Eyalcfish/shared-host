@@ -129,3 +129,14 @@ sh_result_t stop_peeking_shared_host_connection(shared_host_connection* connecti
     return SH_OK;
 }
 
+sh_result_t clear_shared_host_connection(shared_host_connection* connection) {
+    communication_model* model = (communication_model*)connection->ptr;
+
+    if (atomic_load(&model->owned) == 0) {
+        atomic_store(&model->has_data, 0);
+    } else {
+        return SH_ERR_CONNECTION_USED; // ai generated this else
+    }
+    
+    return SH_OK;
+}
