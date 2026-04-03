@@ -27,7 +27,9 @@ typedef enum {
 
     SH_ERR_INVALID_PARAMETER = -6, // occurs when passing invalid parameters to any function, such as a null pointer or an invalid buffer size.
 
-    SH_ERR_CONNECTION_USED = -7, // occurs when trying to USE a connection that is currently owned by another thread.
+    SH_ERR_CONNECTION_OWNED = -7, // occurs when trying to USE a connection that is currently owned by another thread.
+
+    SH_ERR_CONNECTION_NOT_OWNED = -8, // occurs when trying to disown a connection that is not currently owned by the calling thread.
 
     SH_ERR_UNKNOWN = -100 // an unknown error occurred, this is a catch-all for errors that don't fit into the other categories.
 } sh_result_t;
@@ -45,13 +47,11 @@ sh_result_t create_shared_host_connection(const char* port, size_t size, shared_
 
 sh_result_t connect_to_shared_host_connection(const char* port, shared_host_connection** out_connection);
 
-sh_result_t claim_ownership_of_shared_host_connection(shared_host_connection* connection, void** buffer);
+sh_result_t claim_ownership_of_shared_host_connection(shared_host_connection* connection, void** buffer); // EYAL REMEMBER YOU CHANGED THE FUNCTIONS FORMAT
 
-sh_result_t send_package_to_shared_host_connection(shared_host_connection* connection, void** buffer);
+sh_result_t lose_ownership_of_shared_host_connection(shared_host_connection* connection);
 
-sh_result_t peek_shared_host_connection(shared_host_connection* connection, void** buffer, size_t* buffer_size);
-
-sh_result_t stop_peeking_shared_host_connection(shared_host_connection* connection);
+sh_result_t send_package_to_shared_host_connection(shared_host_connection* connection);
 
 sh_result_t clear_shared_host_connection(shared_host_connection* connection);
 

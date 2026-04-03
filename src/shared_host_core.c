@@ -80,51 +80,45 @@ sh_result_t claim_ownership_of_shared_host_connection(shared_host_connection* co
 
     communication_model* model = (communication_model*)connection->ptr;
 
-    if (atomic_load(&model->owned) == 0 && atomic_load(&model->has_data) == 0) {
-        atomic_store(&model->owned, 1);
-    } else {
-        return SH_ERR_CONNECTION_CLOSED; // ai generated this else
+    if (atomic_load(&model->owned) == 1) {
+        return SH_ERR_CONNECTION_OWNED;
     }
-
-    *buffer = connection->ptr+sizeof(communication_model);
-
-    return SH_OK;
-}
-
-sh_result_t send_package_to_shared_host_connection(shared_host_connection* connection, void** buffer) {
-    communication_model* model = (communication_model*)connection->ptr;
-    
-    atomic_store(&model->has_data, 1);
-    atomic_store(&model->owned, 0);
-
-    return SH_OK;
-}
-
-sh_result_t peek_shared_host_connection(shared_host_connection* connection, void** buffer, size_t* buffer_size) {
-    communication_model* model = (communication_model*)connection->ptr;
-
-    if (atomic_load(&model->has_data) == 0) {
-        return SH_OK; // NEED TO CREATE A SEPERATE ERROR
-    }
-
-    size_t peeked = atomic_fetch_add(&model->peeking, 1);
-
-    *buffer = connection->ptr+sizeof(communication_model);
-    *buffer_size = model->capacity;
 
     atomic_store(&model->owned, 1);
 
+    *buffer = connection->ptr+sizeof(communication_model);
+
     return SH_OK;
 }
 
-sh_result_t stop_peeking_shared_host_connection(shared_host_connection* connection) {
+sh_result_t lose_ownership_of_shared_host_connection(shared_host_connection* connection) {
+    if (connection == NULL) {
+        return SH_ERR_INVALID_PARAMETER;
+    }
+     
     communication_model* model = (communication_model*)connection->ptr;
 
-    atomic_fetch_sub(&model->peeking, 1);
-
-    if (atomic_load(&model->peeking) == 0) {
-        atomic_store(&model->owned, 0);
+    if (atomic_load(&model->owned) == 0) {
+        return SH_ERR_CONNECTION_NOT_OWNED;
     }
+
+    atomic_store(&model->owned, 0);
+    return SH_OK;
+}
+
+sh_result_t send_package_to_shared_host_connection(shared_host_connection* connection) {
+    if (connection == NULL) {
+        return SH_ERR_INVALID_PARAMETER;
+    }
+
+    communication_model* model = (communication_model*)connection->ptr;
+
+    if (atomic_load(&model->owned) == 0) {
+        return SH_ERR_CONNECTION_NOT_OWNED;
+    }
+
+    atomic_store(&model->has_data, 1);
+    atomic_store(&model->owned, 0);
 
     return SH_OK;
 }
@@ -132,11 +126,11 @@ sh_result_t stop_peeking_shared_host_connection(shared_host_connection* connecti
 sh_result_t clear_shared_host_connection(shared_host_connection* connection) {
     communication_model* model = (communication_model*)connection->ptr;
 
-    if (atomic_load(&model->owned) == 0) {
-        atomic_store(&model->has_data, 0);
-    } else {
-        return SH_ERR_CONNECTION_USED; // ai generated this else
+    if (atomic_load(&model->owned) == 1) {
+        return SH_ERR_CONNECTION_OWNED; // need to change this
     }
-    
+
+    atomic_store(&model->has_data, 0);
+
     return SH_OK;
 }

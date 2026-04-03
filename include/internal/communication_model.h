@@ -9,7 +9,7 @@ typedef struct communication_model {
     size_t capacity;    
     atomic_int  owned;
     atomic_int  has_data;
-    atomic_long  peeking;
+    size_t message_size;
 } communication_model;
 
 #endif /* COMMUNICATION_MODEL_H */
