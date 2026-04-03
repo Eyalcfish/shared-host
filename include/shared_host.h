@@ -33,9 +33,12 @@ typedef struct shared_host_connection {
     void* ptr;
     size_t size;
     const char* port;
+    #ifdef _WIN32
+    HANDLE handle;
+    #endif
 } shared_host_connection;
 
-sh_result_t create_shared_host_connection(const char* port, shared_host_connection** out_connection);
+sh_result_t create_shared_host_connection(const char* port, size_t size, shared_host_connection** out_connection);
 
 sh_result_t connect_to_shared_host_connection(const char* port, shared_host_connection** out_connection);
 

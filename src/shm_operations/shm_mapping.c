@@ -6,7 +6,7 @@
 #endif
 
 
-sh_result_t CreateSharedMemory(const char* port, size_t size, void* ptr) {
+sh_result_t sh_create_shared_memory(const char* port, size_t size, HANDLE* out_handle, void** ptr) {
     #ifdef _WIN32 
     if (size == 0) {
         return SH_ERR_INVALID_PARAMETER;
@@ -33,6 +33,28 @@ sh_result_t CreateSharedMemory(const char* port, size_t size, void* ptr) {
     if (ptr == NULL) { // safety check
         return SH_ERR_UNKNOWN;
     }
+    #endif
+
+    return SH_OK;
+}
+
+sh_result_t sh_connect_to_shared_memory(const char* port, HANDLE* out_handle, void** ptr) {
+    #ifdef _WIN32
+        *out_handle = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, port);
+
+        if (*out_handle == NULL) {
+            switch (GetLastError()) {
+                case ERROR_FILE_NOT_FOUND:
+                    return SH_ERR_CONNECTION_CLOSED;
+                case ERROR_INVALID_NAME:
+                    return SH_ERR_INVALID_PORT;
+                default:
+                    return SH_ERR_UNKNOWN;
+            }
+        }
+
+        *ptr = MapViewOfFile(*out_handle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+
     #endif
 
     return SH_OK;
