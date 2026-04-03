@@ -1,4 +1,5 @@
 #include <shared_host.h>
+#include <internal/communication_model.h>
 #include "internal/shm_mapping.h"
 
 #ifdef _WIN32
@@ -14,7 +15,7 @@ sh_result_t create_shared_host_connection(const char* port, size_t size, shared_
 
     HANDLE handle = NULL;
     void *ptr = NULL;
-    sh_result_t result = sh_create_shared_memory(port, size, &handle, &ptr);
+    sh_result_t result = sh_create_shared_memory(port, size+sizeof(communication_model), &handle, &ptr);
     if (result != SH_OK) {
         free(*out_connection);
         *out_connection = NULL;
@@ -26,7 +27,7 @@ sh_result_t create_shared_host_connection(const char* port, size_t size, shared_
     (*out_connection)->port = port;
     (*out_connection)->handle = handle;
 
-    *(size_t*)ptr = size;
+    ((communication_model*)ptr)->capacity = size;
 
     return SH_OK;
 }
@@ -50,9 +51,51 @@ sh_result_t connect_to_shared_host_connection(const char* port, shared_host_conn
     }
 
     (*out_connection)->ptr = ptr;
-    (*out_connection)->size = *(size_t*)ptr;
+    (*out_connection)->size = ((communication_model*)ptr)->capacity;
     (*out_connection)->port = port;
-    (*out_connection)->handle = handle;
+    (*out_connection)->handle = handle; // HANDLE IS WINDOWS ONLY
 
     return SH_OK;
 }
+
+sh_result_t close_shared_host_connection(shared_host_connection* connection) {
+    if (connection == NULL) {
+        return SH_ERR_INVALID_PARAMETER;
+    }
+
+    #ifdef _WIN32
+        UnmapViewOfFile(connection->ptr);
+        CloseHandle(connection->handle);
+    #endif
+
+    free(connection);
+
+    return SH_OK;
+}
+
+sh_result_t claim_ownership_of_shared_host_connection(shared_host_connection* connection, void** buffer) {
+    if (connection == NULL) {
+        return SH_ERR_INVALID_PARAMETER;
+    }
+
+    communication_model* model = (communication_model*)connection->ptr;
+
+    if (atomic_load(&model->owned) == 0 && atomic_load(&model->has_data) == 0) {
+        atomic_store(&model->owned, 1);
+    } else {
+        return SH_ERR_CONNECTION_CLOSED; // ai generated this else
+    }
+
+    *buffer = connection->ptr+sizeof(communication_model);
+
+    return SH_OK;
+}
+
+sh_result_t send_package_to_shared_host_connection(shared_host_connection* connection, void** buffer) {
+    communication_model* model = (communication_model*)connection->ptr;
+    
+    atomic_store(&model->has_data, 1);
+    atomic_store(&model->owned, 0);
+
+}
+
