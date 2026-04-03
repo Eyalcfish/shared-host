@@ -6,7 +6,7 @@
 #endif
 
 
-sh_result_t sh_create_shared_memory(const char* port, size_t size, HANDLE* out_handle, void** ptr) {
+sh_result_t sh_create_shared_memory(const char* port, size_t size, shared_host_connection* out_connection) {
     #ifdef _WIN32 
     if (size == 0) {
         return SH_ERR_INVALID_PARAMETER;
@@ -15,7 +15,7 @@ sh_result_t sh_create_shared_memory(const char* port, size_t size, HANDLE* out_h
     DWORD32 dwSizeLow = (DWORD32)(size & 0xFFFFFFFF);
     DWORD32 dwSizeHigh = (DWORD32)(size >> 32);
 
-    *out_handle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, dwSizeHigh, dwSizeLow, port);
+    out_connection->handle = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, dwSizeHigh, dwSizeLow, port);
 
     switch (GetLastError()) {
         case ERROR_ALREADY_EXISTS:
@@ -28,9 +28,9 @@ sh_result_t sh_create_shared_memory(const char* port, size_t size, HANDLE* out_h
             break;
     }
 
-    *ptr = MapViewOfFile(*out_handle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+    out_connection->ptr = MapViewOfFile(out_connection->handle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
 
-    if (*ptr == NULL) { // safety check
+    if (out_connection->ptr == NULL) { // maybe unncessery safety check
         return SH_ERR_UNKNOWN;
     }
     #endif
@@ -38,11 +38,11 @@ sh_result_t sh_create_shared_memory(const char* port, size_t size, HANDLE* out_h
     return SH_OK;
 }
 
-sh_result_t sh_connect_to_shared_memory(const char* port, HANDLE* out_handle, void** ptr) {
+sh_result_t sh_connect_to_shared_memory(const char* port, shared_host_connection* out_connection) {
     #ifdef _WIN32
-        *out_handle = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, port);
+        out_connection->handle = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, port);
 
-        if (*out_handle == NULL) {
+        if (out_connection->handle == NULL) {
             switch (GetLastError()) {
                 case ERROR_FILE_NOT_FOUND:
                     return SH_ERR_CONNECTION_CLOSED;
@@ -53,7 +53,7 @@ sh_result_t sh_connect_to_shared_memory(const char* port, HANDLE* out_handle, vo
             }
         }
 
-        *ptr = MapViewOfFile(*out_handle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+        out_connection->ptr = MapViewOfFile(out_connection->handle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
 
     #endif
 

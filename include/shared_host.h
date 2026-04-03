@@ -47,7 +47,7 @@ sh_result_t create_shared_host_connection(const char* port, size_t size, shared_
 
 sh_result_t connect_to_shared_host_connection(const char* port, shared_host_connection** out_connection);
 
-sh_result_t claim_ownership_of_shared_host_connection(shared_host_connection* connection, void** buffer); // EYAL REMEMBER YOU CHANGED THE FUNCTIONS FORMAT
+sh_result_t claim_ownership_of_shared_host_connection(shared_host_connection* connection, void** buffer);  // maybe implement a waitfor function for zero-copy owning
 
 sh_result_t lose_ownership_of_shared_host_connection(shared_host_connection* connection);
 

@@ -13,21 +13,17 @@ sh_result_t create_shared_host_connection(const char* port, size_t size, shared_
         return SH_ERR_OOM;
     }
 
-    HANDLE handle = NULL;
-    void *ptr = NULL;
-    sh_result_t result = sh_create_shared_memory(port, size+sizeof(communication_model), &handle, &ptr);
+    sh_result_t result = sh_create_shared_memory(port, size+sizeof(communication_model), *out_connection);
     if (result != SH_OK) {
         free(*out_connection);
         *out_connection = NULL;
         return result;
     }
 
-    (*out_connection)->ptr = ptr;
     (*out_connection)->size = size;
     (*out_connection)->port = port;
-    (*out_connection)->handle = handle;
 
-    ((communication_model*)ptr)->capacity = size;
+    ((communication_model*)((*out_connection)->ptr))->capacity = size;
 
     return SH_OK;
 }
@@ -39,10 +35,7 @@ sh_result_t connect_to_shared_host_connection(const char* port, shared_host_conn
         return SH_ERR_OOM;
     }
     
-    HANDLE handle = NULL;
-    void *ptr = NULL;
-
-    sh_result_t result = sh_connect_to_shared_memory(port, &handle, &ptr);
+    sh_result_t result = sh_connect_to_shared_memory(port, *out_connection);
 
     if (result != SH_OK) {
         free(*out_connection);
@@ -50,10 +43,8 @@ sh_result_t connect_to_shared_host_connection(const char* port, shared_host_conn
         return SH_ERR_CONNECTION_CLOSED; 
     }
 
-    (*out_connection)->ptr = ptr;
-    (*out_connection)->size = ((communication_model*)ptr)->capacity;
+    (*out_connection)->size = ((communication_model*)((*out_connection)->ptr))->capacity;
     (*out_connection)->port = port;
-    (*out_connection)->handle = handle; // HANDLE IS WINDOWS ONLY
 
     return SH_OK;
 }
@@ -120,7 +111,7 @@ sh_result_t send_package_to_shared_host_connection(shared_host_connection* conne
     atomic_store(&model->has_data, 1);
     atomic_store(&model->owned, 0);
 
-    return SH_OK;
+    return SH_OK; // TODO: make it output a signal to the other processes
 }
 
 sh_result_t clear_shared_host_connection(shared_host_connection* connection) {
