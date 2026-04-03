@@ -29,7 +29,11 @@ typedef enum {
     SH_ERR_UNKNOWN = -100 // an unknown error occurred, this is a catch-all for errors that don't fit into the other categories.
 } sh_result_t;
 
-typedef struct shared_host_connection shared_host_connection;
+typedef struct shared_host_connection {
+    void* ptr;
+    size_t size;
+    const char* port;
+} shared_host_connection;
 
 sh_result_t create_shared_host_connection(const char* port, shared_host_connection** out_connection);
 
