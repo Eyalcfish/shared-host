@@ -28,7 +28,6 @@ typedef enum {
     SH_ERR_INVALID_PARAMETER = -6, // occurs when passing invalid parameters to any function, such as a null pointer or an invalid buffer size.
 
     SH_ERR_CONNECTION_OWNED = -7, // occurs when trying to USE a connection that is currently owned by another thread.
-
     SH_ERR_CONNECTION_NOT_OWNED = -8, // occurs when trying to disown a connection that is not currently owned by the calling thread.
 
     SH_ERR_UNKNOWN = -100 // an unknown error occurred, this is a catch-all for errors that don't fit into the other categories.
