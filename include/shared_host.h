@@ -38,7 +38,8 @@ typedef struct shared_host_connection {
     size_t size;
     const char* port;
     #ifdef _WIN32
-    HANDLE handle;
+    HANDLE sharedBufferHandle;
+    HANDLE eventHandle;
     #endif
 } shared_host_connection;
 
@@ -50,7 +51,7 @@ sh_result_t claim_ownership_of_shared_host_connection(shared_host_connection* co
 
 sh_result_t lose_ownership_of_shared_host_connection(shared_host_connection* connection);
 
-sh_result_t send_package_to_shared_host_connection(shared_host_connection* connection);
+sh_result_t send_package_to_shared_host_connection(shared_host_connection* connection, size_t size);
 
 sh_result_t clear_shared_host_connection(shared_host_connection* connection);
 
