@@ -3,7 +3,7 @@ SHELL = cmd.exe
 
 CC      := gcc
 CFLAGS  := -Wall -Wextra -Werror -std=c11 -I./include -MMD -MP
-LDFLAGS := 
+LDFLAGS := -lsynchronization
 
 TARGET  := shared-host.exe
 DLL_TARGET := shared-host.dll
@@ -67,4 +67,4 @@ clean:
 	@if exist build\$(TARGET) del /q build\$(TARGET)
 	@if exist build\$(DLL_TARGET) del /q build\$(DLL_TARGET)
 	@if exist build\$(TEST_TARGET) del /q build\$(TEST_TARGET)
-	@if exist build\$(BENCH_TARGET) del /q build\$(BENCH_TARGET)
+	@if exist build\$(BENCH_TARGET) del /q build\$(BENCH_TARGET)

@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <time.h>
 
-#define ITERS 1000
+#define ITERS 10000
 
 int main()
 {
