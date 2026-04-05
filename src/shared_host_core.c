@@ -7,8 +7,10 @@
     #include <windows.h>
 #endif
 
-sh_result_t create_shared_host_connection(const char* port, size_t size, shared_host_connection** out_connection) {
+sh_result_t create_shared_host_connection(const char* port, shared_host_connection** out_connection) {
     *out_connection = (shared_host_connection*)malloc(sizeof(shared_host_connection));
+
+    int size = 1000000; // default size, need to make this dynamic later
 
     if (*out_connection == NULL) {
         return SH_ERR_OOM;
@@ -162,6 +164,7 @@ sh_result_t write_to_shared_host_connection(shared_host_connection* connection, 
     if (buffer_size > model->capacity) {
         return SH_ERR_MESSAGE_TOO_LONG;
     }
+
     if (atomic_load(&model->owned) == 1) {
         return SH_ERR_CONNECTION_OWNED;
     }
