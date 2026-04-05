@@ -152,6 +152,29 @@ sh_result_t clear_shared_host_connection(shared_host_connection* connection) {
     return SH_OK;
 }
 
+sh_result_t write_to_shared_host_connection(shared_host_connection* connection, void* buffer, size_t buffer_size) {
+    if (connection == NULL) {
+        return SH_ERR_INVALID_PARAMETER;
+    }
+
+    communication_model* model = (communication_model*)connection->ptr; 
+
+    if (buffer_size > model->capacity) {
+        return SH_ERR_MESSAGE_TOO_LONG;
+    }
+    if (atomic_load(&model->owned) == 1) {
+        return SH_ERR_CONNECTION_OWNED;
+    }
+
+    atomic_store(&model->owned, 1);
+
+    memcpy(connection->ptr + sizeof(communication_model), buffer, buffer_size);
+
+    atomic_store(&model->has_data, 1);
+
+    return SH_OK;
+}
+
 sh_result_t read_from_shared_host_connection(shared_host_connection* connection, void** buffer, size_t* buffer_size) { // ERROR HANDLING NEEDED
     communication_model* model = (communication_model*)connection->ptr;
 
