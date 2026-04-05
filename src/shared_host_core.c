@@ -165,7 +165,11 @@ sh_result_t read_from_shared_host_connection(shared_host_connection* connection,
         #endif
     }
 
-    *buffer = connection->ptr + sizeof(communication_model);
+    *buffer = malloc(model->message_size);
+    if (*buffer == NULL) {
+        return SH_ERR_OOM;
+    }
+    memcpy(*buffer, connection->ptr + sizeof(communication_model), model->message_size);
     *buffer_size = model->message_size;
 
     return SH_OK;
