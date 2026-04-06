@@ -7,9 +7,12 @@
 
 typedef struct communication_model {
     size_t capacity;    
+} communication_model;
+
+typedef struct communication_model_message {
     atomic_int  owned;
     atomic_int  has_data;
     size_t message_size;
-} communication_model;
+} communication_model_message;
 
 #endif /* COMMUNICATION_MODEL_H */
