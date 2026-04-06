@@ -4,23 +4,39 @@
 
 #ifdef _WIN32
     #include <windows.h>
+    #include <memoryapi.h>
 #endif
 
 
-sh_result_t sh_create_shared_memory(const char* port, const char* role, size_t size, shared_host_connection* out_connection) {
+sh_result_t sh_create_shared_memory(const char* port, const char* role, size_t size, char flags, shared_host_connection* out_connection) {
     #ifdef _WIN32 
     if (size == 0) {
         return SH_ERR_INVALID_PARAMETER;
     }
 
     char *name = NULL;
-    size_t name_len = snprintf(NULL, 0, "Local\\shared-host_%s_%s", port, role) + 1;
+    size_t name_len;
+    if (flags & SHARED_HEADER_FLAG) {
+        name_len = snprintf(NULL, 0, "Local\\shared-host_%s_header", port) + 1;
+    } else {
+        name_len = snprintf(NULL, 0, "Local\\shared-host_%s_%s", port, role) + 1;
+    }
     name = (char*)malloc(name_len);
     if (name == NULL) {
         return SH_ERR_OOM;
     }
 
-    snprintf(name, name_len, "Local\\shared-host_%s_%s", port, role);
+    if (flags & SHARED_HEADER_FLAG) {
+        snprintf(name, name_len, "Local\\shared-host_%s_header", port);
+    } else {
+        SYSTEM_INFO si;
+        GetSystemInfo(&si);
+        size_t granularity = si.dwAllocationGranularity;
+    
+        size = (size + granularity - 1) & ~(granularity - 1);
+        snprintf(name, name_len, "Local\\shared-host_%s_%s", port, role);
+    }
+
 
     DWORD32 dwSizeLow = (DWORD32)(size & 0xFFFFFFFF);
     DWORD32 dwSizeHigh = (DWORD32)(size >> 32);
@@ -29,8 +45,8 @@ sh_result_t sh_create_shared_memory(const char* port, const char* role, size_t s
     
     if (bufferHandle == NULL) {
         int error = GetLastError();
-         free(name);
-        
+        free(name);
+
         switch (error) {
             case ERROR_ALREADY_EXISTS:
                 return SH_ERR_PORT_IN_USE;
@@ -45,10 +61,43 @@ sh_result_t sh_create_shared_memory(const char* port, const char* role, size_t s
         }
     }
     free(name);
+
+    void* ptr;
+    if (!(flags & SHARED_HEADER_FLAG)) {
+        
+        ptr = VirtualAlloc(NULL, 2*size, MEM_RESERVE, PAGE_NOACCESS);
+        if (ptr == NULL) {
+            CloseHandle(bufferHandle);
+            return SH_ERR_OOM;
+        }
+
+        VirtualFree(ptr, 0, MEM_RELEASE);
+
+        PVOID map1 = MapViewOfFileEx(bufferHandle, FILE_MAP_ALL_ACCESS, 0, 0, size, ptr);
+        PVOID map2 = MapViewOfFileEx(bufferHandle, FILE_MAP_ALL_ACCESS, 0, 0, size, (char*)ptr + size);
+
+        if (map1 == NULL) {
+            // Handle error
+            CloseHandle(bufferHandle);
+
+            return SH_ERR_OOM;
+        }
+
+        if (map2 == NULL) {
+            // Handle error
+            UnmapViewOfFile(map1);
+            CloseHandle(bufferHandle);
+            return SH_ERR_OOM;
+        }
+    } else {
+        ptr = MapViewOfFile(bufferHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+    }
     
-    void* ptr = MapViewOfFile(bufferHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
     
-    if (strcmp(role, "server") == 0) { // can prob branchless this
+    if (flags & SHARED_HEADER_FLAG) {
+        out_connection->own_header_shared_ptr = ptr;
+        out_connection->opp_header_shared_ptr = ptr + sizeof(communication_model);
+    } else if (strcmp(role, "server") == 0) { // can prob branchless this
         out_connection->ownSharedBufferHandle = bufferHandle;
         out_connection->own_ptr = ptr;
     } else {
@@ -60,22 +109,37 @@ sh_result_t sh_create_shared_memory(const char* port, const char* role, size_t s
     return SH_OK;
 }
 
-sh_result_t sh_connect_to_shared_memory(const char* port, const char* role, shared_host_connection* out_connection) {
+sh_result_t sh_connect_to_shared_memory(const char* port, const char* role, size_t size, char flags, shared_host_connection* out_connection) {
     #ifdef _WIN32
     char *name = NULL;
-    size_t name_len = snprintf(NULL, 0, "Local\\shared-host_%s_%s", port, role) + 1;
+    size_t name_len;
+    if (flags & SHARED_HEADER_FLAG) {
+        name_len = snprintf(NULL, 0, "Local\\shared-host_%s_header", port) + 1;
+    } else {
+        SYSTEM_INFO si;
+        GetSystemInfo(&si);
+        size_t granularity = si.dwAllocationGranularity;
+    
+        size = (size + granularity - 1) & ~(granularity - 1);
+        
+        name_len = snprintf(NULL, 0, "Local\\shared-host_%s_%s", port, role) + 1;
+    }
     name = (char*)malloc(name_len);
     if (name == NULL) {
         return SH_ERR_OOM;
     }
 
-    snprintf(name, name_len, "Local\\shared-host_%s_%s", port, role);
+    if (flags & SHARED_HEADER_FLAG) {
+        snprintf(name, name_len, "Local\\shared-host_%s_header", port);
+    } else {
+        snprintf(name, name_len, "Local\\shared-host_%s_%s", port, role);
+    }
 
     HANDLE bufferHandle = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, name);
 
     if (bufferHandle == NULL) {
         int error = GetLastError();
-         free(name);
+        free(name);
         
         switch (error) {
             case ERROR_ALREADY_EXISTS:
@@ -90,13 +154,41 @@ sh_result_t sh_connect_to_shared_memory(const char* port, const char* role, shar
     }
     free(name);
 
-    void* ptr = MapViewOfFile(bufferHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
-    if (strcmp(role, "server") == 0) { // can prob branchless this
-        out_connection->oppSharedBufferHandle = bufferHandle;
-        out_connection->opp_ptr = ptr;
-    } else {
-        out_connection->ownSharedBufferHandle = bufferHandle;
-        out_connection->own_ptr = ptr;
+    if (flags & SHARED_HEADER_FLAG) {
+        void* ptr = MapViewOfFile(bufferHandle, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+        out_connection->sharedHeaderHandle = bufferHandle;
+        out_connection->own_header_shared_ptr = ptr + sizeof(communication_model);
+        out_connection->opp_header_shared_ptr = ptr;
+    } else { 
+        void* ptr = VirtualAlloc(NULL, 2*size, MEM_RESERVE, PAGE_NOACCESS);
+        if (ptr == NULL) {
+            CloseHandle(bufferHandle);
+            return SH_ERR_OOM;
+        }
+
+        VirtualFree(ptr, 0, MEM_RELEASE);
+
+        PVOID map1 = MapViewOfFileEx(bufferHandle, FILE_MAP_ALL_ACCESS, 0, 0, size, ptr);
+        PVOID map2 = MapViewOfFileEx(bufferHandle, FILE_MAP_ALL_ACCESS, 0, 0, size, (char*)ptr + size);
+
+        if (map1 == NULL) {
+            CloseHandle(bufferHandle);
+
+            return SH_ERR_OOM;
+        }
+
+        if (map2 == NULL) {
+            UnmapViewOfFile(map1);
+            CloseHandle(bufferHandle);
+            return SH_ERR_OOM;
+        }
+        if (strcmp(role, "server") == 0) { // can prob branchless this
+            out_connection->oppSharedBufferHandle = bufferHandle;
+            out_connection->opp_ptr = ptr;
+        } else {
+            out_connection->ownSharedBufferHandle = bufferHandle;
+            out_connection->own_ptr = ptr;
+        }
     }
 
     #endif

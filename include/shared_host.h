@@ -2,6 +2,7 @@
 #define SHARED_HOST_H
 
 #include <stddef.h>
+#include "internal/communication_model.h"
 
 #ifdef _WIN32
     #include <basetsd.h>
@@ -38,9 +39,12 @@ typedef struct shared_host_connection {
     void* own_current_message_ptr;
     void* opp_ptr;
     void* opp_current_message_ptr;
+    communication_model* own_header_shared_ptr;
+    communication_model* opp_header_shared_ptr;
     size_t size;
     const char* port;
     #ifdef _WIN32
+    HANDLE sharedHeaderHandle;
     HANDLE ownSharedBufferHandle;
     HANDLE oppSharedBufferHandle;
     HANDLE eventHandle;
