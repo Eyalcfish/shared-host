@@ -7,6 +7,7 @@
 
 typedef struct communication_model {
     size_t capacity;    
+    atomic_long left_space;
 } communication_model;
 
 typedef struct communication_model_message {

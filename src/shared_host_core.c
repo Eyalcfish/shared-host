@@ -117,23 +117,32 @@ sh_result_t write_to_shared_host_connection(shared_host_connection* connection, 
         return SH_ERR_INVALID_PARAMETER;
     }
 
-    communication_model_message* current_message = (communication_model_message*)connection->opp_current_message_ptr + sizeof(communication_model_message);
+    communication_model_message* current_message_header = (communication_model_message*)connection->opp_current_message_ptr;
 
-    if (buffer_size > connection->size) { // NEED TO MAKE THIS SPACE LEFT
+    if (buffer_size < (size_t) atomic_load(&((communication_model*)connection->opp_ptr)->left_space)) { // NEED TO MAKE THIS SPACE LEFT
         return SH_ERR_MESSAGE_TOO_LONG;
     }
 
-    if (atomic_load(&current_message->owned) == 1) {
+    if (atomic_load(&current_message_header->owned) == 1) {
         return SH_ERR_CONNECTION_OWNED;
     }
 
-    atomic_store(&current_message->owned, 1);
+    atomic_store(&current_message_header->owned, 1);
 
-    memcpy(connection->opp_current_message_ptr + sizeof(communication_model_message), buffer, buffer_size);
+    current_message_header->message_size = buffer_size;
+
+    memcpy(current_message_header + sizeof(communication_model_message), buffer, buffer_size);
+
+    atomic_fetch_sub(&((communication_model*)connection->opp_ptr)->left_space, sizeof(communication_model_message) + buffer_size);
     
-    atomic_store(&current_message->has_data, 1);
-    
+    atomic_store(&current_message_header->has_data, 1);
+
     (*connection).opp_current_message_ptr += sizeof(communication_model_message) + buffer_size;
+    
+
+    #ifdef _WIN32
+    SetEvent(connection->eventHandle);
+    #endif
 
     return SH_OK;
 }
@@ -143,7 +152,7 @@ sh_result_t read_from_shared_host_connection(shared_host_connection* connection,
         return SH_ERR_INVALID_PARAMETER;
     }
 
-    communication_model_message* current_message = (communication_model_message*)connection->own_current_message_ptr + sizeof(communication_model_message);
+    communication_model_message* current_message = (communication_model_message*)connection->own_current_message_ptr;
 
     while (atomic_load(&current_message->owned) == 1) { // very yucky way to deal with people leaving owned connections
         _mm_pause(); 
@@ -154,13 +163,20 @@ sh_result_t read_from_shared_host_connection(shared_host_connection* connection,
         WaitForSingleObject(connection->eventHandle, INFINITE);
         #endif
     }
+    
+    atomic_store(&current_message->owned, 1);
 
     *buffer = malloc(current_message->message_size);
     if (*buffer == NULL) {
         return SH_ERR_OOM;
     }
-    memcpy(*buffer, connection->own_current_message_ptr + sizeof(communication_model_message), current_message->message_size);
+    memcpy(*buffer, current_message + sizeof(communication_model_message), current_message->message_size);
     *buffer_size = current_message->message_size;
+
+    atomic_fetch_add(&((communication_model*)connection->own_ptr)->left_space, sizeof(communication_model_message) + current_message->message_size);
+
+    atomic_store(&current_message->has_data, 0);
+    atomic_store(&current_message->owned, 0);
 
     return SH_OK;
 }

@@ -14,7 +14,7 @@ int main()
         shared_host_connection *conn = NULL;
         char port[64];
         sprintf(port, "bench_port_%d", i);
-        create_shared_host_connection(port, 1024, &conn);
+        create_shared_host_connection(port, &conn);
         close_shared_host_connection(conn);
     }
 
