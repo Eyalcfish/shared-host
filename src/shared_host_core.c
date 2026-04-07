@@ -163,7 +163,7 @@ sh_result_t write_to_shared_host_connection(shared_host_connection* connection, 
 
     communication_model_message* current_message_header = (communication_model_message*)connection->opp_current_message_ptr;
 
-    if (buffer_size + sizeof(communication_model_message) > (size_t) atomic_load(&connection->opp_header_shared_ptr->left_space)) {
+    if (buffer_size > (size_t) atomic_load(&connection->opp_header_shared_ptr->left_space)) {
         printf("asASDALKSJKD KLASJKDLKASJDd %ld\n", atomic_load(&connection->opp_header_shared_ptr->left_space));
         return SH_ERR_MESSAGE_TOO_LONG;
     }
@@ -195,11 +195,9 @@ sh_result_t read_from_shared_host_connection(shared_host_connection* connection,
     #ifdef _WIN32
     if (atomic_load((&current_message_header->has_data)) == 0) {
         atomic_store(&connection->own_header_shared_ptr->waiting_for_message, 1);
-
-        while (atomic_load(&current_message_header->has_data) == 0) {
+        if (atomic_load((&current_message_header->has_data)) == 0) {
             WaitForSingleObject(connection->ownEventHandle, INFINITE);
         }
-        
         atomic_store(&connection->own_header_shared_ptr->waiting_for_message, 0);
     }
     #endif
@@ -214,9 +212,9 @@ sh_result_t read_from_shared_host_connection(shared_host_connection* connection,
     memcpy(*buffer, (char*)current_message_header + sizeof(communication_model_message), message_size);
     *buffer_size = message_size;
 
-    atomic_store((&current_message_header->has_data), 0);
-
     atomic_fetch_add(&connection->own_header_shared_ptr->left_space, sizeof(communication_model_message) + message_size);
+
+    atomic_store((&current_message_header->has_data), 0);
 
     connection->own_current_message_ptr += sizeof(communication_model_message) + message_size;
 

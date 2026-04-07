@@ -5,6 +5,9 @@
 
 #include <stddef.h>
 
+#define MB *1048576
+#define GB *1024 MB
+
 typedef struct communication_model {
     size_t capacity;    
     atomic_long left_space;
