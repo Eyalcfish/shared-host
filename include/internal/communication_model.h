@@ -12,7 +12,6 @@ typedef struct communication_model {
 } communication_model;
 
 typedef struct communication_model_message {
-    atomic_int  owned;
     atomic_int  has_data;
     atomic_long message_size;
 } communication_model_message;

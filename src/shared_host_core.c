@@ -163,12 +163,12 @@ sh_result_t write_to_shared_host_connection(shared_host_connection* connection, 
 
     communication_model_message* current_message_header = (communication_model_message*)connection->opp_current_message_ptr;
 
-    if (buffer_size > (size_t) atomic_load(&connection->opp_header_shared_ptr->left_space)) {
+    if (buffer_size + sizeof(communication_model_message) > (size_t) atomic_load(&connection->opp_header_shared_ptr->left_space)) {
         printf("asASDALKSJKD KLASJKDLKASJDd %ld\n", atomic_load(&connection->opp_header_shared_ptr->left_space));
         return SH_ERR_MESSAGE_TOO_LONG;
     }
     
-    memcpy(current_message_header + sizeof(communication_model_message), buffer, buffer_size);
+    memcpy((char*)current_message_header + sizeof(communication_model_message), buffer, buffer_size);
 
     atomic_store(&current_message_header->message_size, buffer_size);
     atomic_store(&current_message_header->has_data, 1);
@@ -178,7 +178,6 @@ sh_result_t write_to_shared_host_connection(shared_host_connection* connection, 
     
     #ifdef _WIN32
     if (atomic_load(&connection->opp_header_shared_ptr->waiting_for_message) == 1) {
-        printf("asdlkjsjlkd\n");
         SetEvent(connection->oppEventHandle);
     }
     #endif
@@ -196,16 +195,14 @@ sh_result_t read_from_shared_host_connection(shared_host_connection* connection,
     #ifdef _WIN32
     if (atomic_load((&current_message_header->has_data)) == 0) {
         atomic_store(&connection->own_header_shared_ptr->waiting_for_message, 1);
-        WaitForSingleObject(connection->ownEventHandle, INFINITE);
+
+        while (atomic_load(&current_message_header->has_data) == 0) {
+            WaitForSingleObject(connection->ownEventHandle, INFINITE);
+        }
+        
         atomic_store(&connection->own_header_shared_ptr->waiting_for_message, 0);
-    } else if (atomic_load((&current_message_header->has_data)) != 1){
-        printf("Corrupted data\n");
     }
     #endif
-    
-    // if (atomic_load((&current_message_header->has_data)) == 0) {
-        // printf("ASJDHAKSJDHJKJASD\n");
-    // }
     
     atomic_long message_size = atomic_load(&current_message_header->message_size);
     *buffer = malloc(message_size);
@@ -214,8 +211,10 @@ sh_result_t read_from_shared_host_connection(shared_host_connection* connection,
         return SH_ERR_OOM;
     }
 
-    memcpy(*buffer, current_message_header + sizeof(communication_model_message), message_size);
+    memcpy(*buffer, (char*)current_message_header + sizeof(communication_model_message), message_size);
     *buffer_size = message_size;
+
+    atomic_store((&current_message_header->has_data), 0);
 
     atomic_fetch_add(&connection->own_header_shared_ptr->left_space, sizeof(communication_model_message) + message_size);
 

@@ -10,9 +10,9 @@
 #endif
 
 // --- Batched Benchmark Configuration ---
-#define BATCH_SIZE 1000          // Messages per batch
-#define WARMUP_BATCHES 10        // Batches to discard
-#define MEASURED_BATCHES 1000    // Batches to measure
+#define BATCH_SIZE 100000          // Messages per batch
+#define WARMUP_BATCHES 1        // Batches to discard
+#define MEASURED_BATCHES 10    // Batches to measure
 #define TOTAL_BATCHES (WARMUP_BATCHES + MEASURED_BATCHES)
 
 // 64 bytes is standard for TCP_NODELAY (Nagle disabled) latency benchmarks
@@ -40,16 +40,16 @@ DWORD WINAPI tcp_echo_server_thread(LPVOID param) {
     uint32_t total_messages = TOTAL_BATCHES * BATCH_SIZE;
 
     while (expected_sequence < total_messages) {
+        sh_result_t res;
         
-        printf("Server reading\n");
-        read_from_shared_host_connection(conn, &read_buffer, &read_size);
-        printf("Server read complete\n");
-        Sleep(1);
+        do {
+            res = read_from_shared_host_connection(conn, &read_buffer, &read_size);
+        } while (res != SH_OK);
 
-        printf("Server writing\n");
-        write_to_shared_host_connection(conn, read_buffer, read_size);
-        printf("Server write complete\n");
-        Sleep(1);
+        do {
+            res = write_to_shared_host_connection(conn, read_buffer, read_size);
+        } while (res != SH_OK);
+
         expected_sequence++;
     }
 
@@ -81,8 +81,6 @@ int main()
     assert(hServerThread != NULL);
 #endif
 
-    Sleep(1000);
-
     TestMessage msg;
     memset(msg.payload, 0xAA, PAYLOAD_SIZE); 
 
@@ -108,16 +106,15 @@ int main()
         // Pump the entire batch back and forth as fast as possible
         for (uint32_t i = 0; i < BATCH_SIZE; i++) {
             msg.sequence_id = current_seq++;
+            sh_result_t res;
 
-            printf("[Client] Writing message %u\n", msg.sequence_id);
-            write_to_shared_host_connection(client_conn, &msg, sizeof(TestMessage));
-            printf("[Client] Write complete for message %u\n", msg.sequence_id);
-            Sleep(1);
+            do {
+                res = write_to_shared_host_connection(client_conn, &msg, sizeof(TestMessage));
+            } while (res != SH_OK);
 
-            printf("[Client] Reading message %u\n", msg.sequence_id);
-            read_from_shared_host_connection(client_conn, &read_buffer, &read_size);
-            printf("[Client] Read complete for message %u\n", msg.sequence_id);
-            Sleep(1);
+            do {
+                res = read_from_shared_host_connection(client_conn, &read_buffer, &read_size);
+            } while (res != SH_OK);
         }
 
 #ifdef _WIN32
