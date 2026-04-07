@@ -47,7 +47,8 @@ typedef struct shared_host_connection {
     HANDLE sharedHeaderHandle;
     HANDLE ownSharedBufferHandle;
     HANDLE oppSharedBufferHandle;
-    HANDLE eventHandle;
+    HANDLE ownEventHandle;
+    HANDLE oppEventHandle;
     #endif
 } shared_host_connection; // TODO: move this implementation to an internal header
 

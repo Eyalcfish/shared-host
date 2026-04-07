@@ -197,15 +197,24 @@ sh_result_t sh_connect_to_shared_memory(const char* port, const char* role, size
 }
 
 #ifdef _WIN32
-sh_result_t sh_open_windows_event(const char* port, shared_host_connection* out_connection) {
+sh_result_t sh_open_windows_event(const char* port, char flags, shared_host_connection* out_connection) {
     char *name = NULL;
-    size_t name_len = snprintf(NULL, 0, "Local\\shared-host_event_%s", port) + 1;
+    size_t name_len;
+    if (flags & SERVER_ROLE_FLAG) {
+        name_len = snprintf(NULL, 0, "Local\\shared-host_event_%s_server", port) + 1;
+    } else {
+        name_len = snprintf(NULL, 0, "Local\\shared-host_event_%s_client", port) + 1;
+    }
     name = (char*)malloc(name_len);
     if (name == NULL) {
         return SH_ERR_OOM;
     }
 
-    snprintf(name, name_len, "Local\\shared-host_event_%s", port);
+    if (flags & SERVER_ROLE_FLAG) {
+        snprintf(name, name_len, "Local\\shared-host_event_%s_server", port);
+    } else {
+        snprintf(name, name_len, "Local\\shared-host_event_%s_client", port);
+    }
 
     HANDLE eventHandle = CreateEvent(NULL,FALSE,FALSE,name);
 
@@ -228,8 +237,12 @@ sh_result_t sh_open_windows_event(const char* port, shared_host_connection* out_
         }
     }
 
-    out_connection->eventHandle = eventHandle; 
-    
+    if (flags & OWN_ROLE_FLAG) {
+        out_connection->ownEventHandle = eventHandle;
+    } else {
+        out_connection->oppEventHandle = eventHandle;
+    }
+
     return SH_OK;
 }
 #endif
