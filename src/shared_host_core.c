@@ -11,7 +11,7 @@
 sh_result_t create_shared_host_connection(const char* port, shared_host_connection** out_connection) {
     *out_connection = (shared_host_connection*)malloc(sizeof(shared_host_connection));
 
-    size_t size = 10000000000; // default size, need to make this dynamic later
+    size_t size = 1000000000; // 10 GB default size, need to make this dynamic later
 
     if (*out_connection == NULL) {
         return SH_ERR_OOM;
@@ -163,9 +163,13 @@ sh_result_t write_to_shared_host_connection(shared_host_connection* connection, 
 
     communication_model_message* current_message_header = (communication_model_message*)connection->opp_current_message_ptr;
 
-    if (buffer_size > (size_t) atomic_load(&connection->opp_header_shared_ptr->left_space)) {
-        printf("asASDALKSJKD KLASJKDLKASJDd %ld\n", atomic_load(&connection->opp_header_shared_ptr->left_space));
-        return SH_ERR_MESSAGE_TOO_LONG;
+    // if (buffer_size > (size_t) atomic_load(&connection->opp_header_shared_ptr->left_space)) {
+    //     printf("asASDALKSJKD KLASJKDLKASJDd %ld\n", atomic_load(&connection->opp_header_shared_ptr->left_space));
+    //     return SH_ERR_MESSAGE_TOO_LONG;
+    // }
+
+    // i Wouldnt count this as the safest solution but it should work fine as long as the reader is fast enough, though it spins
+    while (buffer_size > (size_t) atomic_load(&connection->opp_header_shared_ptr->left_space)) {
     }
     
     memcpy((char*)current_message_header + sizeof(communication_model_message), buffer, buffer_size);

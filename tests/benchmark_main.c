@@ -18,7 +18,7 @@ typedef struct {
 } TestMessage;
 #pragma pack(pop)
 
-#define THROUGHPUT_MESSAGES 5000000
+#define THROUGHPUT_MESSAGES 50000000
 
 #define BATCH_SIZE 1000          
 #define WARMUP_BATCHES 1      
@@ -40,6 +40,9 @@ DWORD WINAPI throughput_server_thread(LPVOID param) {
         if (read_from_shared_host_connection(conn, &read_buffer, &read_size) == SH_OK) {
             expected_sequence++;
             free(read_buffer);
+        } else {
+            printf("[Server] Failed to read message %u\n", expected_sequence);
+            return -1;
         }
     }
     return 0;
@@ -96,9 +99,11 @@ int main() {
     for (uint32_t i = 0; i < THROUGHPUT_MESSAGES; i++) {
         msg.sequence_id = i;
         sh_result_t res;
-        do {
-            res = write_to_shared_host_connection(tp_client, &msg, sizeof(TestMessage));
-        } while (res != SH_OK);
+        res = write_to_shared_host_connection(tp_client, &msg, sizeof(TestMessage));
+        if (res != SH_OK) {
+            printf("[Writer] Failed to send message %u/%d\n", i + 1, THROUGHPUT_MESSAGES);
+            return -1;
+        }
     }
 
     WaitForSingleObject(hTpThread, INFINITE);
