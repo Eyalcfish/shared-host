@@ -5,11 +5,12 @@
 
 #include <stddef.h>
 
-#define MB *1048576
+#define KB *1024
+#define MB *1024 KB
 #define GB *1024 MB
 
 typedef struct communication_model {
-    size_t capacity;    
+    size_t capacity;
     atomic_long left_space;
     atomic_long waiting_for_message;
 } communication_model;
