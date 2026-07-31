@@ -49,13 +49,14 @@ int compare_doubles(const void* a, const void* b) {
 // -----------------------------------------------------------------------------
 // SERVER THREAD
 // -----------------------------------------------------------------------------
-void server() {
+void server(char is_soft_locked) {
     shared_host_connection* connection = (shared_host_connection*) malloc(sizeof(shared_host_connection));
-    int error = create_shared_host_connection("test", connection);
+    int error = create_shared_host_connection("test", is_soft_locked, connection);
     if (error != SH_OK) {
         printf("[SERVER] Failed to create connection: %s\n", error_to_string(error));
         return;
     }
+
 
     LARGE_INTEGER freq;
     QueryPerformanceFrequency(&freq);
@@ -248,7 +249,7 @@ void client() {
 // 1. Create a wrapper function that matches the Win32 ThreadProc signature
 DWORD WINAPI server_wrapper(LPVOID lpParam) {
     (void)lpParam;
-    server();
+    server(1);
     return 0; // Thread exit code
 }
 
