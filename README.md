@@ -2,6 +2,8 @@
 
 A high-performance, ultra-low-latency Inter-Process Communication (IPC) library written in C. `shared-host` leverages shared memory ring buffers for fast, reliable message passing between processes.
 
+Basically a faster localhost-like communication method.
+
 ---
 
 ## Ai Usage Guidelines
