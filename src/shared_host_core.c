@@ -12,9 +12,11 @@
 #endif
 
 sh_result_t create_shared_host_connection(const char* port, shared_host_connection* out_connection) {
+    if (port == NULL || out_connection == NULL) {
+        return SH_ERR_INVALID_PARAMETER;
+    }
     sh_result_t result = SH_OK;
     size_t size = 1 GB;
-
     HANDLE settingsBufferHandle = NULL;
     void* settingsBuffer = NULL;
 
