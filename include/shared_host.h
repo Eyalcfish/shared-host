@@ -69,9 +69,9 @@ typedef struct shared_host_connection {
 
 //SETTINGS: (0)settings_header, (settings_header)first_connection_header, (settings_header+connection_header)second_connection_header
 
-sh_result_t create_shared_host_connection(char *port, char is_soft_locked, shared_host_connection *out_connection);
+sh_result_t create_shared_host_connection(const char *port, char is_soft_locked, shared_host_connection *out_connection);
 
-sh_result_t connect_to_shared_host_connection(char* port, size_t* size, shared_host_connection* out_connection);
+sh_result_t connect_to_shared_host_connection(const char* port, size_t* size, shared_host_connection* out_connection);
 
 sh_result_t write_to_shared_host_connection(shared_host_connection* connection, void* buffer, size_t buffer_size);
 

@@ -1,11 +1,11 @@
 #include "internal/shm_mapping.h"
 #include "shared_host.h"
-#include <dlgs.h>
-#include <errhandlingapi.h>
 #include <stdio.h>
 #include <stdint.h>
 
 #ifdef _WIN32
+    #include <dlgs.h>
+    #include <errhandlingapi.h>
     #include <windows.h>
     #include <memoryapi.h>
 #endif
@@ -104,7 +104,7 @@ sh_result_t connect_to_windows_event(const char* event_name, HANDLE* event_handl
     return SH_OK;
 }
 
-sh_result_t format_unique_name(char* port, char* category, size_t total_size, char** result) {
+sh_result_t format_unique_name(const char* port, const char* category, size_t total_size, char** result) {
     char* full_name = (char*)malloc(total_size + 21);
 
     if (full_name == NULL) {

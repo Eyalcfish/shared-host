@@ -11,7 +11,7 @@ sh_result_t create_windows_event(const char* event_name, HANDLE* event_handle);
 
 sh_result_t connect_to_windows_event(const char* event_name, HANDLE* event_handle);
 
-sh_result_t format_unique_name(char* port, char* category, size_t total_size, char** result);
+sh_result_t format_unique_name(const char* port, const char* category, size_t total_size, char** result);
 
 
 // #ifdef _WIN32

@@ -5,14 +5,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <wingdi.h>
-#include <winnt.h>
 
 #ifdef _WIN32
+#include <wingdi.h>
+#include <winnt.h>
 #include <windows.h>
 #endif
 
-sh_result_t create_shared_host_connection(char *port, char is_soft_locked, shared_host_connection *out_connection) {
+sh_result_t create_shared_host_connection(const char *port, char is_soft_locked, shared_host_connection *out_connection) {
 	if (port == NULL || out_connection == NULL) {
 		return SH_ERR_INVALID_PARAMETER;
 	}
@@ -124,6 +124,7 @@ sh_result_t create_shared_host_connection(char *port, char is_soft_locked, share
 		free(opp_event_name);
 		return own_event_result;
 	}
+	free(own_event_name);
 
 	sh_result_t opp_event_result = create_windows_event(opp_event_name, &out_connection->opp_event_handle);
 	if (opp_event_result != SH_OK) {
@@ -131,13 +132,14 @@ sh_result_t create_shared_host_connection(char *port, char is_soft_locked, share
 		free(opp_event_name);
 		return opp_event_result;
 	}
+	free(opp_event_name);
 
 	write_to_shared_host_connection(out_connection, "hello", 6);
 
 	return SH_OK;
 }
 
-sh_result_t connect_to_shared_host_connection(char *port, size_t *size, shared_host_connection *out_connection) {
+sh_result_t connect_to_shared_host_connection(const char *port, size_t *size, shared_host_connection *out_connection) {
 	sh_result_t result = SH_OK;
 
 	HANDLE settingsBufferHandle = NULL;
@@ -240,13 +242,15 @@ sh_result_t connect_to_shared_host_connection(char *port, size_t *size, shared_h
 		free(opp_event_name);
 		return own_event_result;
 	}
+	free(opp_event_name);
 
 	sh_result_t opp_event_result = connect_to_windows_event(own_event_name, &out_connection->own_event_handle);
 	if (opp_event_result != SH_OK) {
 		free(own_event_name);
-		free(opp_event_name);
 		return opp_event_result;
 	}
+
+	free(own_event_name);
 
 	write_to_shared_host_connection(out_connection, "hello", 6);
 
@@ -264,6 +268,8 @@ sh_result_t close_shared_host_connection(shared_host_connection *connection) {
 	CloseHandle(connection->shared_settings_page_handle);
 	CloseHandle(connection->own_shared_connection_buffer_handle);
 	CloseHandle(connection->opp_shared_connection_buffer_handle);
+	CloseHandle(connection->own_event_handle);
+	CloseHandle(connection->opp_event_handle);
 
 	free(connection);
 
