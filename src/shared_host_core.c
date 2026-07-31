@@ -128,7 +128,6 @@ sh_result_t create_shared_host_connection(const char *port, char is_soft_locked,
 
 	sh_result_t opp_event_result = create_windows_event(opp_event_name, &out_connection->opp_event_handle);
 	if (opp_event_result != SH_OK) {
-		free(own_event_name);
 		free(opp_event_name);
 		return opp_event_result;
 	}
