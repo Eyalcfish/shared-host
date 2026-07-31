@@ -64,7 +64,7 @@ typedef struct shared_host_connection {
 //BUFFER A: messages
 //BUFFER B: messages
 
-//SETTIGNS: (0)settings_header, (settings_header)first_connection_header, (settings_header+connection_header)second_connection_header
+//SETTINGS: (0)settings_header, (settings_header)first_connection_header, (settings_header+connection_header)second_connection_header
 
 sh_result_t create_shared_host_connection(const char* port, shared_host_connection* out_connection);
 
