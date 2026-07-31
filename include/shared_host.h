@@ -2,7 +2,6 @@
 #define SHARED_HOST_H
 
 #include <stddef.h>
-#include "internal/communication_model.h"
 
 #ifdef _WIN32
     #include <basetsd.h>
@@ -40,10 +39,8 @@ typedef enum {
 } sh_connection_type;
 
 typedef struct shared_host_shared_connection_header {
-    void* current_item_ptr; // should be a atomic pointer
-    void* last_item_ptr; // should be a atomic pointer
-    void* page_start; // can stay non-atomic
-    void* page_end; // can stay non-atomic
+    size_t current_item_offset; // should be a atomic
+    size_t last_item_offset; // should be a atomic
 } shared_host_shared_connection_header;
 
 typedef struct shared_host_shared_settings_header {
@@ -52,7 +49,9 @@ typedef struct shared_host_shared_settings_header {
 } shared_host_shared_settings_header;
 
 typedef struct shared_host_connection {
-    shared_host_shared_connection_header* own_shared_connection_header; // this would be more efficient to move to the shared settings buffer
+    void* own_page_start;
+    void* opp_page_start;
+    shared_host_shared_connection_header* own_shared_connection_header;
     shared_host_shared_connection_header* opp_shared_connection_header;
     shared_host_shared_settings_header* shared_settings_page_ptr;
     #ifdef _WIN32
@@ -69,13 +68,15 @@ typedef struct shared_host_connection {
 
 sh_result_t create_shared_host_connection(const char* port, shared_host_connection* out_connection);
 
-sh_result_t connect_to_shared_host_connection(const char* port, shared_host_connection** out_connection);
+sh_result_t connect_to_shared_host_connection(const char* port, size_t* size, shared_host_connection* out_connection);
 
 sh_result_t write_to_shared_host_connection(shared_host_connection* connection, void* buffer, size_t buffer_size);
 
 sh_result_t read_from_shared_host_connection(shared_host_connection* connection, void** buffer, size_t* buffer_size);
 
 sh_result_t close_shared_host_connection(shared_host_connection* connection);
+
+char* error_to_string(sh_result_t result);
 
 #ifdef __cplusplus
 }
