@@ -10,9 +10,7 @@
 #include <windows.h>
 #endif
 
-sh_result_t
-create_shared_host_connection(const char *port,
-                              shared_host_connection *out_connection) {
+sh_result_t create_shared_host_connection(char *port, shared_host_connection *out_connection) {
   if (port == NULL || out_connection == NULL) {
     return SH_ERR_INVALID_PARAMETER;
   }
@@ -21,44 +19,36 @@ create_shared_host_connection(const char *port,
   HANDLE settingsBufferHandle = NULL;
   void *settingsBuffer = NULL;
 
-  const char *settings_template = "Local\\shared_host_%s_settings";
-  int settings_name_len = snprintf(NULL, 0, settings_template, port);
-  char *settings_name = (char *)malloc(settings_name_len + 1);
-  if (settings_name == NULL) {
-    return SH_ERR_OOM;
-  }
-  sprintf(settings_name, settings_template, port);
+  char *settings_name;
+  sh_result_t settings_name_result = format_unique_name(port, "settings", strlen(port)+strlen("settings"), &settings_name);
 
-  result = sh_create_shared_memory(
-      settings_name,
-      sizeof(shared_host_shared_settings_header) +
-          sizeof(shared_host_shared_connection_header) * 2,
-      &settingsBufferHandle, &settingsBuffer);
+  if (settings_name_result != SH_OK) {
+    return settings_name_result;
+  }
+
+  result = sh_create_shared_memory(settings_name, sizeof(shared_host_shared_settings_header) + sizeof(shared_host_shared_connection_header) * 2, &settingsBufferHandle, &settingsBuffer);
   free(settings_name);
 
   if (result != SH_OK) {
     return result;
   }
 
-  shared_host_shared_settings_header *settings_header =
-      (shared_host_shared_settings_header *)settingsBuffer;
+  shared_host_shared_settings_header *settings_header = (shared_host_shared_settings_header *)settingsBuffer;
   settings_header->size = size;
 
   HANDLE ownBufferHandle = NULL;
   void *ownBuffer = NULL;
 
-  const char *own_buffer_template = "Local\\shared_host_%s_own_buffer";
-  int own_buffer_name_len = snprintf(NULL, 0, own_buffer_template, port);
-  char *own_buffer_name = (char *)malloc(own_buffer_name_len + 1);
-  if (own_buffer_name == NULL) {
+
+  char *own_buffer_name;
+  sh_result_t own_buffer_name_result = format_unique_name(port, "own_buffer", strlen(port)+strlen("own_buffer"), &own_buffer_name);
+  if (own_buffer_name_result != SH_OK) {
     UnmapViewOfFile(settingsBuffer);
     CloseHandle(settingsBufferHandle);
-    return SH_ERR_OOM;
+    return own_buffer_name_result;
   }
-  sprintf(own_buffer_name, own_buffer_template, port);
 
-  result = sh_create_shared_memory(own_buffer_name, size, &ownBufferHandle,
-                                   &ownBuffer);
+  result = sh_create_shared_memory(own_buffer_name, size, &ownBufferHandle, &ownBuffer);
   free(own_buffer_name);
 
   if (result != SH_OK) {
@@ -70,20 +60,17 @@ create_shared_host_connection(const char *port,
   HANDLE oppBufferHandle = NULL;
   void *oppBuffer = NULL;
 
-  const char *opp_buffer_template = "Local\\shared_host_%s_opp_buffer";
-  int opp_buffer_name_len = snprintf(NULL, 0, opp_buffer_template, port);
-  char *opp_buffer_name = (char *)malloc(opp_buffer_name_len + 1);
-  if (opp_buffer_name == NULL) {
+  char *opp_buffer_name;
+  sh_result_t opp_buffer_name_result = format_unique_name(port, "opp_buffer", strlen(port)+strlen("opp_buffer"), &opp_buffer_name);
+  if (opp_buffer_name_result != SH_OK) {
     UnmapViewOfFile(settingsBuffer);
     CloseHandle(settingsBufferHandle);
     UnmapViewOfFile(ownBuffer);
     CloseHandle(ownBufferHandle);
-    return SH_ERR_OOM;
+    return opp_buffer_name_result;
   }
-  sprintf(opp_buffer_name, opp_buffer_template, port);
 
-  result = sh_create_shared_memory(opp_buffer_name, size, &oppBufferHandle,
-                                   &oppBuffer);
+  result = sh_create_shared_memory(opp_buffer_name, size, &oppBufferHandle, &oppBuffer);
   free(opp_buffer_name);
 
   if (result != SH_OK) {
@@ -99,12 +86,8 @@ create_shared_host_connection(const char *port,
   out_connection->opp_shared_connection_buffer_handle = oppBufferHandle;
 
   out_connection->shared_settings_page_ptr = settingsBuffer;
-  out_connection->own_shared_connection_header =
-      (shared_host_shared_connection_header
-           *)(((char *)settingsBuffer) +
-              sizeof(shared_host_shared_settings_header));
-  out_connection->opp_shared_connection_header =
-      out_connection->own_shared_connection_header + 1;
+  out_connection->own_shared_connection_header = (shared_host_shared_connection_header *)(((char *)settingsBuffer) + sizeof(shared_host_shared_settings_header));
+  out_connection->opp_shared_connection_header = out_connection->own_shared_connection_header + 1;
 
   out_connection->own_page_start = ownBuffer;
   out_connection->opp_page_start = oppBuffer;
@@ -117,53 +100,42 @@ create_shared_host_connection(const char *port,
   return SH_OK;
 }
 
-sh_result_t
-connect_to_shared_host_connection(const char *port, size_t *size,
-                                  shared_host_connection *out_connection) {
+sh_result_t connect_to_shared_host_connection(char *port, size_t *size, shared_host_connection *out_connection) {
   sh_result_t result = SH_OK;
 
   HANDLE settingsBufferHandle = NULL;
   void *settingsBuffer = NULL;
 
-  const char *settings_template = "Local\\shared_host_%s_settings";
-  int settings_name_len = snprintf(NULL, 0, settings_template, port);
-  char *settings_name = (char *)malloc(settings_name_len + 1);
-  if (settings_name == NULL) {
-    return SH_ERR_OOM;
+  char *settings_name;
+  sh_result_t settings_name_result = format_unique_name(port, "settings", strlen(port)+strlen("settings"), &settings_name);
+  if (settings_name_result != SH_OK) {
+    return settings_name_result;
   }
-  sprintf(settings_name, settings_template, port);
 
-  *size = sizeof(shared_host_shared_settings_header) +
-          sizeof(shared_host_shared_connection_header) * 2;
+  *size = sizeof(shared_host_shared_settings_header) + sizeof(shared_host_shared_connection_header) * 2;
 
-  result = sh_connect_to_shared_memory(settings_name, *size,
-                                       &settingsBufferHandle, &settingsBuffer);
+  result = sh_connect_to_shared_memory(settings_name, *size, &settingsBufferHandle, &settingsBuffer);
   free(settings_name);
 
   if (result != SH_OK) {
     return result;
   }
 
-  shared_host_shared_settings_header *settings_header =
-      (shared_host_shared_settings_header *)settingsBuffer;
+  shared_host_shared_settings_header *settings_header = (shared_host_shared_settings_header *)settingsBuffer;
   *size = settings_header->size;
-  // settings_header->connection_type = ;
 
   HANDLE ownBufferHandle = NULL;
   void *ownBuffer = NULL;
 
-  const char *own_buffer_template = "Local\\shared_host_%s_opp_buffer";
-  int own_buffer_name_len = snprintf(NULL, 0, own_buffer_template, port);
-  char *own_buffer_name = (char *)malloc(own_buffer_name_len + 1);
-  if (own_buffer_name == NULL) {
+  char *own_buffer_name;
+  sh_result_t own_buffer_name_result = format_unique_name(port, "opp_buffer", strlen(port)+strlen("opp_buffer"), &own_buffer_name);
+  if (own_buffer_name_result != SH_OK) {
     UnmapViewOfFile(settingsBuffer);
     CloseHandle(settingsBufferHandle);
-    return SH_ERR_OOM;
+    return own_buffer_name_result;
   }
-  sprintf(own_buffer_name, own_buffer_template, port);
 
-  result = sh_connect_to_shared_memory(own_buffer_name, *size, &ownBufferHandle,
-                                       &ownBuffer);
+  result = sh_connect_to_shared_memory(own_buffer_name, *size, &ownBufferHandle, &ownBuffer);
   free(own_buffer_name);
 
   if (result != SH_OK) {
@@ -175,20 +147,17 @@ connect_to_shared_host_connection(const char *port, size_t *size,
   HANDLE oppBufferHandle = NULL;
   void *oppBuffer = NULL;
 
-  const char *opp_buffer_template = "Local\\shared_host_%s_own_buffer";
-  int opp_buffer_name_len = snprintf(NULL, 0, opp_buffer_template, port);
-  char *opp_buffer_name = (char *)malloc(opp_buffer_name_len + 1);
-  if (opp_buffer_name == NULL) {
+  char *opp_buffer_name = NULL;
+  sh_result_t opp_buffer_name_result = format_unique_name(port, "own_buffer", strlen(port)+strlen("own_buffer"), &opp_buffer_name);
+  if (opp_buffer_name_result != SH_OK) {
     UnmapViewOfFile(settingsBuffer);
     CloseHandle(settingsBufferHandle);
     UnmapViewOfFile(ownBuffer);
     CloseHandle(ownBufferHandle);
-    return SH_ERR_OOM;
+    return opp_buffer_name_result;
   }
-  sprintf(opp_buffer_name, opp_buffer_template, port);
 
-  result = sh_connect_to_shared_memory(opp_buffer_name, *size, &oppBufferHandle,
-                                       &oppBuffer);
+  result = sh_connect_to_shared_memory(opp_buffer_name, *size, &oppBufferHandle, &oppBuffer);
   free(opp_buffer_name);
 
   if (result != SH_OK) {
@@ -204,12 +173,8 @@ connect_to_shared_host_connection(const char *port, size_t *size,
   out_connection->opp_shared_connection_buffer_handle = oppBufferHandle;
 
   out_connection->shared_settings_page_ptr = settingsBuffer;
-  out_connection->opp_shared_connection_header =
-      (shared_host_shared_connection_header
-           *)(((char *)settingsBuffer) +
-              sizeof(shared_host_shared_settings_header));
-  out_connection->own_shared_connection_header =
-      out_connection->opp_shared_connection_header + 1;
+  out_connection->opp_shared_connection_header = (shared_host_shared_connection_header *)(((char *)settingsBuffer) + sizeof(shared_host_shared_settings_header));
+  out_connection->own_shared_connection_header = out_connection->opp_shared_connection_header + 1;
 
   out_connection->own_page_start = ownBuffer;
   out_connection->opp_page_start = oppBuffer;
@@ -239,58 +204,41 @@ sh_result_t close_shared_host_connection(shared_host_connection *connection) {
   return SH_OK;
 }
 
-sh_result_t write_to_shared_host_connection(shared_host_connection *connection,
-                                            void *buffer, size_t buffer_size) {
+sh_result_t write_to_shared_host_connection(shared_host_connection *connection, void *buffer, size_t buffer_size) {
   if (connection == NULL || buffer == NULL || buffer_size == 0) {
     return SH_ERR_INVALID_PARAMETER;
   }
 
-  void *last_item_address =
-      (void *)((char *)connection->opp_page_start +
-               connection->opp_shared_connection_header
-                   ->last_item_offset); // the address of the last item
+  void *last_item_address = (void *)((char *)connection->opp_page_start + connection->opp_shared_connection_header->last_item_offset); // the address of the last item
 
-  size_t ring_buffer_size =
-      connection->shared_settings_page_ptr->size; // the ring buffer size
+  size_t ring_buffer_size = connection->shared_settings_page_ptr->size; // the ring buffer size
 
-  size_t current_item_offset =
-      *(size_t *)(last_item_address); // the address of the last item's next
-                                      // item offset, aka our current item
-                                      // offset's pointer
+  size_t current_item_offset = *(size_t *)(last_item_address); // the address of the last item's next
+                                                               // item offset, aka our current item
+                                                               // offset's pointer
 
-  if (current_item_offset + buffer_size + 2 * sizeof(size_t) >=
-      ring_buffer_size) { // check if the offset of the the current item +
-                          // buffer_size + 2*sizeof(size_t) is bigger than the
-                          // ring buffer size
+  if (current_item_offset + buffer_size + 2 * sizeof(size_t) >= ring_buffer_size) { // check if the offset of the the current item +
+                                                                                    // buffer_size + 2*sizeof(size_t) is bigger than the
+                                                                                    // ring buffer size
     // check if we can write from page_start
-    if (connection->opp_shared_connection_header->current_item_offset >=
-        buffer_size +
-            2 * sizeof(size_t)) { // we can write from the start, aka check if
-                                  // we can write the message inbetween 0 and
-                                  // the reader's current read item
-      *(size_t *)(last_item_address) = 0; // set the last item's next item to 0
+    if (connection->opp_shared_connection_header->current_item_offset >= buffer_size + 2 * sizeof(size_t)) { // we can write from the start, aka check if
+                                                                                                             // we can write the message inbetween 0 and
+                                                                                                             // the reader's current read item
+      *(size_t *)(last_item_address) = 0;                                                                    // set the last item's next item to 0
       current_item_offset = 0;
     } else { // we cant write anything at all
       return SH_ERR_MESSAGE_TOO_LONG;
     }
   } else {
-    if (current_item_offset <
-            connection->opp_shared_connection_header->current_item_offset &&
-        current_item_offset + buffer_size + 2 * sizeof(size_t) >=
-            connection->opp_shared_connection_header->current_item_offset) {
+    if (current_item_offset < connection->opp_shared_connection_header->current_item_offset && current_item_offset + buffer_size + 2 * sizeof(size_t) >= connection->opp_shared_connection_header->current_item_offset) {
       return SH_ERR_MESSAGE_TOO_LONG;
     }
   }
 
-  void *current_item_address =
-      (void *)((char *)connection->opp_page_start +
-               current_item_offset); // this is the address for our current item
-  *(size_t *)current_item_address =
-      current_item_offset + buffer_size +
-      2 * sizeof(size_t); // this sets the next item offset to the current item
-                          // offset + buffer_size + 2*sizeof(size_t)
-  *(size_t *)((char *)current_item_address + sizeof(size_t)) =
-      buffer_size; // this sets the size of the current item
+  void *current_item_address = (void *)((char *)connection->opp_page_start + current_item_offset); // this is the address for our current item
+  *(size_t *)current_item_address = current_item_offset + buffer_size + 2 * sizeof(size_t);        // this sets the next item offset to the current item
+                                                                                                   // offset + buffer_size + 2*sizeof(size_t)
+  *(size_t *)((char *)current_item_address + sizeof(size_t)) = buffer_size;                        // this sets the size of the current item
 
   memcpy((void *)((char *)current_item_address + 2 * sizeof(size_t)), buffer,
          buffer_size); // this copies the buffer to the current item address +
@@ -302,21 +250,17 @@ sh_result_t write_to_shared_host_connection(shared_host_connection *connection,
   __sync_synchronize();
 #endif
 
-  connection->opp_shared_connection_header->last_item_offset =
-      current_item_offset;
+  connection->opp_shared_connection_header->last_item_offset = current_item_offset;
 
   return SH_OK;
 }
 
-sh_result_t read_from_shared_host_connection(shared_host_connection *connection,
-                                             void **buffer,
-                                             size_t *buffer_size) {
+sh_result_t read_from_shared_host_connection(shared_host_connection *connection, void **buffer, size_t *buffer_size) {
   if (connection == NULL || buffer == NULL || buffer_size == NULL) {
     return SH_ERR_INVALID_PARAMETER;
   }
 
-  while (connection->own_shared_connection_header->current_item_offset ==
-         connection->own_shared_connection_header->last_item_offset) {
+  while (connection->own_shared_connection_header->current_item_offset == connection->own_shared_connection_header->last_item_offset) {
 #ifdef _WIN32
     YieldProcessor();
 #else
@@ -324,14 +268,11 @@ sh_result_t read_from_shared_host_connection(shared_host_connection *connection,
 #endif
   }
 
-  void *current_item_address =
-      (void *)((char *)connection->own_page_start +
-               connection->own_shared_connection_header->current_item_offset);
+  void *current_item_address = (void *)((char *)connection->own_page_start + connection->own_shared_connection_header->current_item_offset);
 
   size_t next_item_offset = *(size_t *)(current_item_address);
 
-  current_item_address =
-      (void *)((char *)connection->own_page_start + next_item_offset);
+  current_item_address = (void *)((char *)connection->own_page_start + next_item_offset);
 
   *buffer_size = *(size_t *)((char *)current_item_address + sizeof(size_t));
   *buffer = (void *)((char *)current_item_address + 2 * sizeof(size_t));
@@ -343,8 +284,7 @@ sh_result_t read_from_shared_host_connection(shared_host_connection *connection,
   // memcpy(*buffer, (void*)((char*)current_item_address + 2*sizeof(size_t)),
   // *buffer_size);
 
-  connection->own_shared_connection_header->current_item_offset =
-      next_item_offset;
+  connection->own_shared_connection_header->current_item_offset = next_item_offset;
 
   return SH_OK;
 }

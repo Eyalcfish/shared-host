@@ -58,6 +58,8 @@ typedef struct shared_host_connection {
     HANDLE shared_settings_page_handle;
     HANDLE own_shared_connection_buffer_handle;
     HANDLE opp_shared_connection_buffer_handle;
+    HANDLE own_event_handle;
+    HANDLE opp_event_handle;
     #endif
 } shared_host_connection; // TODO: move this implementation to an internal header
 
@@ -66,9 +68,9 @@ typedef struct shared_host_connection {
 
 //SETTINGS: (0)settings_header, (settings_header)first_connection_header, (settings_header+connection_header)second_connection_header
 
-sh_result_t create_shared_host_connection(const char* port, shared_host_connection* out_connection);
+sh_result_t create_shared_host_connection(char *port, shared_host_connection *out_connection);
 
-sh_result_t connect_to_shared_host_connection(const char* port, size_t* size, shared_host_connection* out_connection);
+sh_result_t connect_to_shared_host_connection(char* port, size_t* size, shared_host_connection* out_connection);
 
 sh_result_t write_to_shared_host_connection(shared_host_connection* connection, void* buffer, size_t buffer_size);
 
