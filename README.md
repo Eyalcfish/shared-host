@@ -61,6 +61,7 @@ Basically a faster localhost-like communication method.
 
 - **Ultra-Low Latency**: Sub-microsecond message delivery (~188.7 ns avg latency).
 - **High Throughput**: Exceeds 14 Million ops/sec on 64B payloads and 11.6 GB/s bandwidth on 64KB payloads.
+- **Flexible Connection Modes**: Supports `SH_FAST_CONNECTION` (spin-polling for ultra-low latency) and `SH_SLOW_CONNECTION` (OS event synchronization for low CPU utilization).
 - **Zero Corruption Guarantee**: Includes boundary wrap validation and sequence tracking.
 - **Clean C API**: Host connection creation, connection attachment, non-blocking read/write operations, and resource cleanup.
 - **Cross-Platform Makefile**: Supports building shared libraries (`.dll` / `.so`) and test/benchmark suites.
@@ -95,14 +96,25 @@ Batch scripts (Windows) and shell scripts (Linux/macOS) are located in `scripts/
 
 Header file: `#include <shared_host.h>`
 
+### Connection Modes (`sh_connection_type`)
+
+When creating a host connection via `create_shared_host_connection`, pass a mode flag to control synchronization behavior:
+
+| Flag / Enum | Value | Description |
+| :--- | :--- | :--- |
+| `SH_FAST_CONNECTION` | `0` | **Spin-polling / Yield mode**: Busy-spins using `YieldProcessor()` / `pause` for sub-microsecond latency and maximum throughput. Best for high-frequency, real-time IPC. |
+| `SH_SLOW_CONNECTION` | `1` | **Event-driven mode**: Uses OS event handle synchronization (`WaitForSingleObject`) to sleep until data arrives. Minimizes CPU usage when waiting for messages. |
+
+### Code Example
+
 ```c
 #include <stdio.h>
 #include <stdlib.h>
 #include <shared_host.h>
 
-// 1. Create a server host connection
+// 1. Create a server host connection (passing SH_FAST_CONNECTION or SH_SLOW_CONNECTION)
 shared_host_connection server_conn;
-sh_result_t err = create_shared_host_connection("my_channel", &server_conn);
+sh_result_t err = create_shared_host_connection("my_channel", SH_FAST_CONNECTION, &server_conn);
 
 // 2. Connect client to host
 shared_host_connection client_conn;
