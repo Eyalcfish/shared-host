@@ -249,7 +249,7 @@ void client() {
 // 1. Create a wrapper function that matches the Win32 ThreadProc signature
 DWORD WINAPI server_wrapper(LPVOID lpParam) {
     (void)lpParam;
-    server(1);
+    server(SH_SLOW_CONNECTION);
     return 0; // Thread exit code
 }
 
