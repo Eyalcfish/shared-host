@@ -1,7 +1,7 @@
 #ifndef SHM_MAPPING_H
 #define SHM_MAPPING_H
 
-#include "shared_host.h"
+#include "../shared_host.h"
 
 sh_result_t sh_create_shared_memory(const char* port, size_t size, HANDLE* bufferHandle, void** bufferPtr);
 

@@ -4,7 +4,7 @@
 # ==============================================================================
 
 CC      := gcc
-CFLAGS  := -Wall -Wextra -Werror -std=c11 -O3 -I./include -MMD -MP
+CFLAGS  := -Wall -Wextra -Werror -std=c11 -O3 -I./include -I./src/internal -MMD -MP
 
 # Detect Operating System
 ifeq ($(OS),Windows_NT)
@@ -33,7 +33,7 @@ OBJ_DIR   := obj
 BUILD_DIR := build
 
 # Source Files
-CORE_SRC  := $(SRC_DIR)/shared_host_core.c $(SRC_DIR)/shm_operations/shm_mapping.c
+CORE_SRC  := $(SRC_DIR)/shared_host_core.c $(SRC_DIR)/shared_host_read.c $(SRC_DIR)/shared_host_write.c $(SRC_DIR)/shm_operations/shm_mapping.c
 TEST_SRC  := $(TEST_DIR)/testandbenchmark.c
 
 # Object Files
