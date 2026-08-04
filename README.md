@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="Shared-Host Logo" width="600"/>
+</p>
+
 # shared-host
 
 A high-performance, ultra-low-latency Inter-Process Communication (IPC) library written in C. `shared-host` leverages shared memory ring buffers for fast, reliable message passing between processes.
