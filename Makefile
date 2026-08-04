@@ -33,8 +33,8 @@ OBJ_DIR   := obj
 BUILD_DIR := build
 
 # Source Files
-CORE_SRC  := $(SRC_DIR)/shared_host_core.c $(SRC_DIR)/shared_host_read.c $(SRC_DIR)/shared_host_write.c $(SRC_DIR)/shared_host_zc_write.c $(SRC_DIR)/shared_host_zc_send.c $(SRC_DIR)/shm_operations/shm_mapping.c
-TEST_SRC  := $(TEST_DIR)/main.c $(TEST_DIR)/benchmark.c $(TEST_DIR)/history.c
+CORE_SRC  := $(SRC_DIR)/shared_host_core.c $(SRC_DIR)/shm_operations/shm_mapping.c
+TEST_SRC  := $(TEST_DIR)/testandbenchmark.c
 
 # Object Files
 CORE_OBJ  := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(CORE_SRC))
@@ -49,7 +49,7 @@ TEST_TARGET   := $(BUILD_DIR)/test_main$(EXE)
 BENCH_TARGET  := $(BUILD_DIR)/benchmark_main$(EXE)
 TB_TARGET     := $(BUILD_DIR)/testandbenchmark$(EXE)
 
-.PHONY: all dll test benchmark testandbenchmark run run-test run-benchmark run-testandbenchmark clean help
+.PHONY: all dll test benchmark testandbenchmark run run-test run-benchmark clean help
 
 all: dll test benchmark testandbenchmark
 
@@ -95,10 +95,6 @@ run-test: test
 run-benchmark: benchmark
 	$(call RUN_CMD,$(BENCH_TARGET))
 
-run-testandbenchmark: testandbenchmark
-	$(call MKDIR,benchmarks)
-	$(call RUN_CMD,$(TB_TARGET))
-
 clean:
 	$(call RMDIR,$(OBJ_DIR))
 	$(call RMDIR,$(BUILD_DIR))
@@ -106,12 +102,10 @@ clean:
 help:
 	@echo Shared-Host Build System
 	@echo Targets:
-	@echo   all                  Build DLL, test suite, and benchmark binaries
-	@echo   dll                  Build the shared library (shared-host.dll)
-	@echo   test                 Build the test executable (test_main.exe)
-	@echo   benchmark            Build the benchmark executable (benchmark_main.exe)
-	@echo   testandbenchmark     Build the dual-mode test+benchmark suite
-	@echo   run-test             Build and run the test suite
-	@echo   run-benchmark        Build and run the benchmark suite
-	@echo   run-testandbenchmark Build and run dual-mode suite (FAST+SLOW with history)
-	@echo   clean                Remove build artifacts and object files
+	@echo   all              Build DLL, test suite, and benchmark binaries
+	@echo   dll              Build the shared library (shared-host.dll)
+	@echo   test             Build the test executable (test_main.exe)
+	@echo   benchmark        Build the benchmark executable (benchmark_main.exe)
+	@echo   run-test         Build and run the test suite
+	@echo   run-benchmark    Build and run the benchmark suite
+	@echo   clean            Remove build artifacts and object files
