@@ -2,15 +2,15 @@
 #include <string.h>
 
 sh_result_t write_to_shared_host_connection(shared_host_connection *connection, void *buffer, size_t buffer_size) {
+   	if (connection == NULL || buffer == NULL || buffer_size == 0) {
+		return SH_ERR_INVALID_PARAMETER;
+	}
+
     return connection->write(connection, buffer, buffer_size);
 }
 
 // SH_FAST_CONNECTION
 sh_result_t write_to_shared_host_connection_fast(shared_host_connection *connection, void *buffer, size_t buffer_size) {
-	if (connection == NULL || buffer == NULL || buffer_size == 0) {
-		return SH_ERR_INVALID_PARAMETER;
-	}
-
 	void *last_item_address = (void *)((char *)connection->opp_page_start + connection->opp_shared_connection_header->last_item_offset); // the address of the last item
 
 	size_t ring_buffer_size = connection->shared_settings_page_ptr->size; // the ring buffer size
@@ -61,10 +61,6 @@ sh_result_t write_to_shared_host_connection_fast(shared_host_connection *connect
 
 // SH_SLOW_CONNECTION
 sh_result_t write_to_shared_host_connection_slow(shared_host_connection *connection, void *buffer, size_t buffer_size) {
-	if (connection == NULL || buffer == NULL || buffer_size == 0) {
-		return SH_ERR_INVALID_PARAMETER;
-	}
-
 	void *last_item_address = (void *)((char *)connection->opp_page_start + connection->opp_shared_connection_header->last_item_offset); // the address of the last item
 
 	size_t ring_buffer_size = connection->shared_settings_page_ptr->size; // the ring buffer size
