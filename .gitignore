@@ -3,7 +3,5 @@
 *.dll
 *.so
 *.dylib
-*.a
 
 obj
-benchmarks/

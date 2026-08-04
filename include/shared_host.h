@@ -15,10 +15,6 @@
 extern "C" {
 #endif
 
-#define SH_KB *1024
-#define SH_MB *1024 SH_KB
-#define SH_GB *1024 SH_MB
-
 typedef enum {
     SH_OK = 0, // good good
 
@@ -53,45 +49,32 @@ typedef struct shared_host_shared_settings_header {
 } shared_host_shared_settings_header;
 
 typedef struct shared_host_connection {
-    sh_result_t (*write)(struct shared_host_connection *connection, void *buffer, size_t buffer_size);
-    sh_result_t (*read)(struct shared_host_connection *connection, void **buffer, size_t *buffer_size);
-    sh_result_t (*send)(struct shared_host_connection *connection);
-
     void* own_page_start;
     void* opp_page_start;
     shared_host_shared_connection_header* own_shared_connection_header;
     shared_host_shared_connection_header* opp_shared_connection_header;
     shared_host_shared_settings_header* shared_settings_page_ptr;
-    size_t open_offset;
     #ifdef _WIN32
     HANDLE shared_settings_page_handle;
     HANDLE own_shared_connection_buffer_handle;
     HANDLE opp_shared_connection_buffer_handle;
-    HANDLE own_event_handle;
-    HANDLE opp_event_handle;
     #endif
 } shared_host_connection; // TODO: move this implementation to an internal header
 
-sh_result_t create_shared_host_connection(const char *port, char flags, shared_host_connection *out_connection);
+//BUFFER A: messages
+//BUFFER B: messages
+
+//SETTINGS: (0)settings_header, (settings_header)first_connection_header, (settings_header+connection_header)second_connection_header
+
+sh_result_t create_shared_host_connection(const char* port, shared_host_connection* out_connection);
 
 sh_result_t connect_to_shared_host_connection(const char* port, size_t* size, shared_host_connection* out_connection);
 
+sh_result_t write_to_shared_host_connection(shared_host_connection* connection, void* buffer, size_t buffer_size);
+
+sh_result_t read_from_shared_host_connection(shared_host_connection* connection, void** buffer, size_t* buffer_size);
+
 sh_result_t close_shared_host_connection(shared_host_connection* connection);
-
-sh_result_t write_to_shared_host_connection(shared_host_connection *connection, void *buffer, size_t buffer_size);
-sh_result_t write_to_shared_host_connection_fast(shared_host_connection *connection, void *buffer, size_t buffer_size);
-sh_result_t write_to_shared_host_connection_slow(shared_host_connection *connection, void *buffer, size_t buffer_size);
-
-sh_result_t read_from_shared_host_connection(shared_host_connection *connection, void **buffer, size_t *buffer_size);
-sh_result_t read_from_shared_host_connection_fast(shared_host_connection *connection, void **buffer, size_t *buffer_size);
-sh_result_t read_from_shared_host_connection_slow(shared_host_connection *connection, void **buffer, size_t *buffer_size);
-
-sh_result_t zc_write_to_shared_host_connection(shared_host_connection *connection, void **buffer, size_t buffer_size);
-
-sh_result_t zc_send_to_shared_host_connection(shared_host_connection *connection);
-sh_result_t zc_send_to_shared_host_connection_fast(shared_host_connection *connection);
-sh_result_t zc_send_to_shared_host_connection_slow(shared_host_connection *connection);
-
 
 char* error_to_string(sh_result_t result);
 
