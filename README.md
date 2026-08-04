@@ -144,11 +144,16 @@ shared-host/
 │   ├── shared_host.h              # Public C API header
 │   └── internal/                  # Internal connection and mapping headers
 ├── src/
-│   ├── shared_host_core.c         # Main IPC connection and buffer logic
+│   ├── shared_host_core.c         # Connection creation, attachment, and close logic
+│   ├── shared_host_read.c         # Read operations (fast + slow)
+│   ├── shared_host_write.c        # Write operations (fast + slow)
 │   └── shm_operations/
 │       └── shm_mapping.c          # OS shared memory mapping implementations
 ├── tests/
-│   └── testandbenchmark.c         # Comprehensive test and benchmark suite
+│   ├── test_utils.h               # Shared defines, structs, and inline utilities
+│   ├── benchmark.c                # Server/client benchmark phases (latency, sweep, integrity)
+│   ├── history.c                  # JSON persistence and historical regression comparison
+│   └── main.c                     # Entry point and dual-mode orchestration
 ├── scripts/                       # Wrapper scripts (.bat, .cmd, .sh)
 ├── Makefile                       # Cross-platform GNU Makefile
 └── README.md                      # Documentation and performance stats

@@ -15,6 +15,7 @@ sh_result_t create_shared_host_connection(const char *port, char flags, shared_h
 	if (port == NULL || out_connection == NULL) {
 		return SH_ERR_INVALID_PARAMETER;
 	}
+
 	sh_result_t result = SH_OK;
 	size_t size = 1 SH_GB;
 	HANDLE settingsBufferHandle = NULL;
