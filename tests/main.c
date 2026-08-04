@@ -160,10 +160,10 @@ int main() {
     print_zc_comparison_table(&slow_results, &slow_zc_results);
 
     // ---- Save to history ----
-    save_results_to_json(&fast_results, &slow_results);
+    save_results_to_json(&fast_results, &fast_zc_results, &slow_results, &slow_zc_results);
 
     // ---- Historical regression comparison ----
-    load_and_compare_history(&fast_results, &slow_results);
+    load_and_compare_history(&fast_results, &fast_zc_results, &slow_results, &slow_zc_results);
 
     return 0;
 }

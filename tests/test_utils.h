@@ -105,7 +105,7 @@ void run_zc_unit_tests(void);
 // Function declarations (history.c)
 // =============================================================================
 
-void save_results_to_json(benchmark_results_t *fast, benchmark_results_t *slow);
-void load_and_compare_history(benchmark_results_t *fast, benchmark_results_t *slow);
+void save_results_to_json(benchmark_results_t *fast, benchmark_results_t *fast_zc, benchmark_results_t *slow, benchmark_results_t *slow_zc);
+void load_and_compare_history(benchmark_results_t *fast, benchmark_results_t *fast_zc, benchmark_results_t *slow, benchmark_results_t *slow_zc);
 
 #endif /* TEST_UTILS_H */
