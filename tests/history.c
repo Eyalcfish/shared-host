@@ -86,7 +86,7 @@ static char* read_entire_file(const char *path) {
 // JSON EMITTER: save results to benchmarks/history.json
 // =============================================================================
 
-void save_results_to_json(benchmark_results_t *fast, benchmark_results_t *slow) {
+void save_results_to_json(benchmark_results_t *fast, benchmark_results_t *fast_zc, benchmark_results_t *slow, benchmark_results_t *slow_zc) {
     _mkdir(HISTORY_DIR);
 
     char timestamp[64];
@@ -123,8 +123,16 @@ void save_results_to_json(benchmark_results_t *fast, benchmark_results_t *slow) 
     write_result_json(fp, fast, timestamp, commit);
     fprintf(fp, ",\n");
 
+    // Write FAST (ZC) result
+    write_result_json(fp, fast_zc, timestamp, commit);
+    fprintf(fp, ",\n");
+
     // Write SLOW result
     write_result_json(fp, slow, timestamp, commit);
+    fprintf(fp, ",\n");
+
+    // Write SLOW (ZC) result
+    write_result_json(fp, slow_zc, timestamp, commit);
     fprintf(fp, "\n");
 
     fprintf(fp, "]\n");
@@ -297,23 +305,35 @@ static void print_regression(const char *mode_label, benchmark_results_t *prev, 
     printf("\n");
 }
 
-void load_and_compare_history(benchmark_results_t *fast, benchmark_results_t *slow) {
+static int find_previous_mode_entry(span_t *entries, int entry_count, const char *target_mode_name, benchmark_results_t *out_prev, char *out_timestamp, size_t ts_size) {
+    int start_idx = (entry_count >= 4) ? entry_count - 5 : entry_count - 1;
+    for (int i = start_idx; i >= 0; i--) {
+        benchmark_results_t tmp;
+        if (parse_result_entry(entries[i].start, entries[i].end, &tmp)) {
+            if (strcmp(tmp.mode_name, target_mode_name) == 0) {
+                *out_prev = tmp;
+                if (out_timestamp) {
+                    const char *ts = find_json_key(entries[i].start, "timestamp");
+                    if (ts) parse_json_string(ts, out_timestamp, ts_size);
+                    else strncpy(out_timestamp, "unknown", ts_size - 1);
+                }
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+void load_and_compare_history(benchmark_results_t *fast, benchmark_results_t *fast_zc, benchmark_results_t *slow, benchmark_results_t *slow_zc) {
     char *json = read_entire_file(HISTORY_FILE);
     if (!json) {
         printf("[INFO] No previous benchmark history found. Skipping regression comparison.\n");
         return;
     }
 
-    // We need to find the second-to-last FAST and SLOW entries
-    // (the last entries are the ones we just wrote)
-    // Strategy: find all top-level objects, parse them, keep the last-seen
-    // FAST and SLOW entries that aren't the ones we just wrote (i.e. skip the last 2)
-
-    // Count total entries
     int entry_count = 0;
     const char *p = json;
-    // Find all top-level '{' that start entries
-    typedef struct { const char *start; const char *end; } span_t;
+
     span_t *entries = NULL;
     int entries_cap = 0;
 
@@ -324,7 +344,6 @@ void load_and_compare_history(benchmark_results_t *fast, benchmark_results_t *sl
     while (*p) {
         p = skip_ws(p);
         if (*p == '{') {
-            // Find matching '}'  (simple: count braces)
             int depth = 1;
             const char *start = p;
             p++;
@@ -335,7 +354,6 @@ void load_and_compare_history(benchmark_results_t *fast, benchmark_results_t *sl
             }
             const char *end = p;
 
-            // Grow array
             if (entry_count >= entries_cap) {
                 entries_cap = (entries_cap == 0) ? 16 : entries_cap * 2;
                 entries = (span_t*) realloc(entries, sizeof(span_t) * entries_cap);
@@ -350,52 +368,36 @@ void load_and_compare_history(benchmark_results_t *fast, benchmark_results_t *sl
         }
     }
 
-    // Need at least 4 entries (prev FAST, prev SLOW, curr FAST, curr SLOW)
-    if (entry_count < 4) {
-        printf("[INFO] Not enough historical data for regression comparison (need at least 2 runs).\n");
-        free(entries);
-        free(json);
-        return;
-    }
-
-    // The last 2 entries are the current run (FAST, SLOW)
-    // Walk backwards from entry_count-3 to find the most recent previous FAST and SLOW
-    benchmark_results_t prev_fast, prev_slow;
-    int found_fast = 0, found_slow = 0;
-    char prev_timestamp[64] = "unknown";
-
-    for (int i = entry_count - 3; i >= 0 && (!found_fast || !found_slow); i--) {
-        benchmark_results_t tmp;
-        if (parse_result_entry(entries[i].start, entries[i].end, &tmp)) {
-            if (!found_fast && tmp.mode == SH_FAST_CONNECTION) {
-                prev_fast = tmp;
-                found_fast = 1;
-                // Extract timestamp
-                const char *ts = find_json_key(entries[i].start, "timestamp");
-                if (ts) parse_json_string(ts, prev_timestamp, sizeof(prev_timestamp));
-            }
-            if (!found_slow && tmp.mode == SH_SLOW_CONNECTION) {
-                prev_slow = tmp;
-                found_slow = 1;
-            }
-        }
-    }
-
     printf("\n");
     printf("=================================================================\n");
     printf("            HISTORICAL REGRESSION COMPARISON                      \n");
     printf("=================================================================\n\n");
 
-    if (found_fast) {
-        print_regression("FAST", &prev_fast, fast, prev_timestamp);
+    benchmark_results_t prev;
+    char prev_ts[64] = "unknown";
+
+    if (find_previous_mode_entry(entries, entry_count, fast->mode_name, &prev, prev_ts, sizeof(prev_ts))) {
+        print_regression(fast->mode_name, &prev, fast, prev_ts);
     } else {
-        printf("[INFO] No previous FAST benchmark found for comparison.\n");
+        printf("[INFO] No previous %s benchmark found for comparison.\n", fast->mode_name);
     }
 
-    if (found_slow) {
-        print_regression("SLOW", &prev_slow, slow, prev_timestamp);
+    if (find_previous_mode_entry(entries, entry_count, fast_zc->mode_name, &prev, prev_ts, sizeof(prev_ts))) {
+        print_regression(fast_zc->mode_name, &prev, fast_zc, prev_ts);
     } else {
-        printf("[INFO] No previous SLOW benchmark found for comparison.\n");
+        printf("[INFO] No previous %s benchmark found for comparison.\n", fast_zc->mode_name);
+    }
+
+    if (find_previous_mode_entry(entries, entry_count, slow->mode_name, &prev, prev_ts, sizeof(prev_ts))) {
+        print_regression(slow->mode_name, &prev, slow, prev_ts);
+    } else {
+        printf("[INFO] No previous %s benchmark found for comparison.\n", slow->mode_name);
+    }
+
+    if (find_previous_mode_entry(entries, entry_count, slow_zc->mode_name, &prev, prev_ts, sizeof(prev_ts))) {
+        print_regression(slow_zc->mode_name, &prev, slow_zc, prev_ts);
+    } else {
+        printf("[INFO] No previous %s benchmark found for comparison.\n", slow_zc->mode_name);
     }
 
     free(entries);

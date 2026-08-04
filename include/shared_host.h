@@ -55,14 +55,14 @@ typedef struct shared_host_shared_settings_header {
 typedef struct shared_host_connection {
     sh_result_t (*write)(struct shared_host_connection *connection, void *buffer, size_t buffer_size);
     sh_result_t (*read)(struct shared_host_connection *connection, void **buffer, size_t *buffer_size);
+    sh_result_t (*send)(struct shared_host_connection *connection);
 
     void* own_page_start;
     void* opp_page_start;
     shared_host_shared_connection_header* own_shared_connection_header;
     shared_host_shared_connection_header* opp_shared_connection_header;
     shared_host_shared_settings_header* shared_settings_page_ptr;
-    // read
-    // write
+    size_t open_offset;
     #ifdef _WIN32
     HANDLE shared_settings_page_handle;
     HANDLE own_shared_connection_buffer_handle;
@@ -85,6 +85,13 @@ sh_result_t write_to_shared_host_connection_slow(shared_host_connection *connect
 sh_result_t read_from_shared_host_connection(shared_host_connection *connection, void **buffer, size_t *buffer_size);
 sh_result_t read_from_shared_host_connection_fast(shared_host_connection *connection, void **buffer, size_t *buffer_size);
 sh_result_t read_from_shared_host_connection_slow(shared_host_connection *connection, void **buffer, size_t *buffer_size);
+
+sh_result_t zc_write_to_shared_host_connection(shared_host_connection *connection, void **buffer, size_t buffer_size);
+
+sh_result_t zc_send_to_shared_host_connection(shared_host_connection *connection);
+sh_result_t zc_send_to_shared_host_connection_fast(shared_host_connection *connection);
+sh_result_t zc_send_to_shared_host_connection_slow(shared_host_connection *connection);
+
 
 char* error_to_string(sh_result_t result);
 

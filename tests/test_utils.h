@@ -49,8 +49,9 @@ typedef struct {
 
 // Complete benchmark results for one mode
 typedef struct {
-    char mode_name[16];         // "FAST" or "SLOW"
+    char mode_name[32];         // "FAST", "FAST (ZC)", etc.
     sh_connection_type mode;
+    int is_zero_copy;
     // Phase 1 - Latency
     latency_stats_t latency;
     // Phase 2 - Sweep (per payload size)
@@ -96,14 +97,15 @@ static inline const char* mode_to_string(sh_connection_type mode) {
 // Function declarations (benchmark.c)
 // =============================================================================
 
-void run_benchmark_server(sh_connection_type mode, benchmark_results_t *results);
-void run_benchmark_client(sh_connection_type mode);
+void run_benchmark_server(sh_connection_type mode, int use_zero_copy, const char *port_name, benchmark_results_t *results);
+void run_benchmark_client(sh_connection_type mode, int use_zero_copy, const char *port_name);
+void run_zc_unit_tests(void);
 
 // =============================================================================
 // Function declarations (history.c)
 // =============================================================================
 
-void save_results_to_json(benchmark_results_t *fast, benchmark_results_t *slow);
-void load_and_compare_history(benchmark_results_t *fast, benchmark_results_t *slow);
+void save_results_to_json(benchmark_results_t *fast, benchmark_results_t *fast_zc, benchmark_results_t *slow, benchmark_results_t *slow_zc);
+void load_and_compare_history(benchmark_results_t *fast, benchmark_results_t *fast_zc, benchmark_results_t *slow, benchmark_results_t *slow_zc);
 
 #endif /* TEST_UTILS_H */
