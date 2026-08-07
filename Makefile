@@ -34,7 +34,7 @@ BUILD_DIR := build
 
 # Source Files
 CORE_SRC  := $(SRC_DIR)/shared_host_core.c $(SRC_DIR)/shared_host_read.c $(SRC_DIR)/shared_host_write.c $(SRC_DIR)/shared_host_zc_write.c $(SRC_DIR)/shared_host_zc_send.c $(SRC_DIR)/shm_operations/shm_mapping.c
-TEST_SRC  := $(TEST_DIR)/main.c $(TEST_DIR)/benchmark.c $(TEST_DIR)/history.c
+TEST_SRC  := $(TEST_DIR)/main.c $(TEST_DIR)/benchmark.c $(TEST_DIR)/history.c $(TEST_DIR)/comprehensive_tests.c
 
 # Object Files
 CORE_OBJ  := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(CORE_SRC))
