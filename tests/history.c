@@ -305,6 +305,8 @@ static void print_regression(const char *mode_label, benchmark_results_t *prev, 
     printf("\n");
 }
 
+typedef struct { const char *start; const char *end; } span_t;
+
 static int find_previous_mode_entry(span_t *entries, int entry_count, const char *target_mode_name, benchmark_results_t *out_prev, char *out_timestamp, size_t ts_size) {
     int start_idx = (entry_count >= 4) ? entry_count - 5 : entry_count - 1;
     for (int i = start_idx; i >= 0; i--) {

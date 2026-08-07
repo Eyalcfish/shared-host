@@ -100,6 +100,7 @@ static inline const char* mode_to_string(sh_connection_type mode) {
 void run_benchmark_server(sh_connection_type mode, int use_zero_copy, const char *port_name, benchmark_results_t *results);
 void run_benchmark_client(sh_connection_type mode, int use_zero_copy, const char *port_name);
 void run_zc_unit_tests(void);
+void run_bullshit_test(void);
 
 // =============================================================================
 // Function declarations (history.c)
