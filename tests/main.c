@@ -137,20 +137,28 @@ int main() {
     printf("*     Testing: STANDARD vs ZERO-COPY (zc_write / zc_send)        *\n");
     printf("*****************************************************************\n\n");
 
+    // ---- Generate unique process-scoped port names to prevent handle collisions ----
+    DWORD pid = GetCurrentProcessId();
+    char p_fast_std[32], p_fast_zc[32], p_slow_std[32], p_slow_zc[32];
+    snprintf(p_fast_std, sizeof(p_fast_std), "t_fstd_%lu", (unsigned long)pid);
+    snprintf(p_fast_zc, sizeof(p_fast_zc), "t_fzc_%lu", (unsigned long)pid);
+    snprintf(p_slow_std, sizeof(p_slow_std), "t_sstd_%lu", (unsigned long)pid);
+    snprintf(p_slow_zc, sizeof(p_slow_zc), "t_szc_%lu", (unsigned long)pid);
+
     // ---- Run FAST mode (Standard) ----
-    run_mode(SH_FAST_CONNECTION, 0, "test_fast_std", &fast_results);
+    run_mode(SH_FAST_CONNECTION, 0, p_fast_std, &fast_results);
     Sleep(200);
 
     // ---- Run FAST mode (Zero-Copy) ----
-    run_mode(SH_FAST_CONNECTION, 1, "test_fast_zc", &fast_zc_results);
+    run_mode(SH_FAST_CONNECTION, 1, p_fast_zc, &fast_zc_results);
     Sleep(200);
 
     // ---- Run SLOW mode (Standard) ----
-    run_mode(SH_SLOW_CONNECTION, 0, "test_slow_std", &slow_results);
+    run_mode(SH_SLOW_CONNECTION, 0, p_slow_std, &slow_results);
     Sleep(200);
 
     // ---- Run SLOW mode (Zero-Copy) ----
-    run_mode(SH_SLOW_CONNECTION, 1, "test_slow_zc", &slow_zc_results);
+    run_mode(SH_SLOW_CONNECTION, 1, p_slow_zc, &slow_zc_results);
 
     // ---- Standard FAST vs SLOW comparison ----
     print_comparison_table(&fast_results, &slow_results);
@@ -165,5 +173,15 @@ int main() {
     // ---- Historical regression comparison ----
     load_and_compare_history(&fast_results, &fast_zc_results, &slow_results, &slow_zc_results);
 
+    // ---- Run Iceoryx2-style Bullshit Test ----
+    Sleep(500);
+    run_bullshit_test();
+
+    printf("[SUCCESS] All benchmarks completed successfully.\n");
+    fflush(stdout);
+
+    ExitProcess(0);
     return 0;
 }
+
+
