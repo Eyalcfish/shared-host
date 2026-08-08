@@ -1,29 +1,34 @@
 #include "test_utils.h"
 
+#include "test_utils.h"
+#include <math.h>
+
 // =============================================================================
-// COMPARISON TABLE: FAST vs SLOW side-by-side
+// COMPARISON TABLE: FAST vs SLOW side-by-side (ENHANCED)
 // =============================================================================
 static void print_comparison_table(benchmark_results_t *fast, benchmark_results_t *slow) {
     printf("\n");
     printf("=================================================================\n");
-    printf("            FAST vs SLOW MODE COMPARISON                         \n");
+    printf("            FAST vs SLOW MODE COMPARISON (ENHANCED)              \n");
     printf("=================================================================\n\n");
 
-    printf("--- Phase 1: Latency ---\n");
-    printf(" Metric          |       FAST |       SLOW\n");
-    printf("------------------+------------+------------\n");
-    printf(" Min Latency     | %8.1f ns | %8.1f ns\n", fast->latency.min_ns, slow->latency.min_ns);
-    printf(" Avg Latency     | %8.1f ns | %8.1f ns\n", fast->latency.avg_ns, slow->latency.avg_ns);
-    printf(" P50 (Median)    | %8.1f ns | %8.1f ns\n", fast->latency.p50_ns, slow->latency.p50_ns);
-    printf(" P99 Latency     | %8.1f ns | %8.1f ns\n", fast->latency.p99_ns, slow->latency.p99_ns);
-    printf(" P99.9 Latency   | %8.1f ns | %8.1f ns\n", fast->latency.p999_ns, slow->latency.p999_ns);
-    printf(" Max Latency     | %8.1f ns | %8.1f ns\n\n", fast->latency.max_ns, slow->latency.max_ns);
+    printf("--- Phase 1: Latency & Jitter ---\n");
+    printf(" Metric          |       FAST |       SLOW |     Ratio\n");
+    printf("------------------+------------+------------+-----------\n");
+    printf(" Min Latency     | %8.1f ns | %8.1f ns |   %.2fx\n", fast->latency.min_ns, slow->latency.min_ns, slow->latency.min_ns / (fast->latency.min_ns > 0 ? fast->latency.min_ns : 1));
+    printf(" Avg Latency     | %8.1f ns | %8.1f ns |   %.2fx\n", fast->latency.avg_ns, slow->latency.avg_ns, slow->latency.avg_ns / (fast->latency.avg_ns > 0 ? fast->latency.avg_ns : 1));
+    printf(" Std Deviation   | %8.1f ns | %8.1f ns |   %.2fx\n", fast->latency.std_dev_ns, slow->latency.std_dev_ns, slow->latency.std_dev_ns / (fast->latency.std_dev_ns > 0 ? fast->latency.std_dev_ns : 1));
+    printf(" Jitter          | %8.1f ns | %8.1f ns |   %.2fx\n", fast->latency.jitter_ns, slow->latency.jitter_ns, slow->latency.jitter_ns / (fast->latency.jitter_ns > 0 ? fast->latency.jitter_ns : 1));
+    printf(" P50 (Median)    | %8.1f ns | %8.1f ns |   %.2fx\n", fast->latency.p50_ns, slow->latency.p50_ns, slow->latency.p50_ns / (fast->latency.p50_ns > 0 ? fast->latency.p50_ns : 1));
+    printf(" P99 Latency     | %8.1f ns | %8.1f ns |   %.2fx\n", fast->latency.p99_ns, slow->latency.p99_ns, slow->latency.p99_ns / (fast->latency.p99_ns > 0 ? fast->latency.p99_ns : 1));
+    printf(" P99.9 Latency   | %8.1f ns | %8.1f ns |   %.2fx\n", fast->latency.p999_ns, slow->latency.p999_ns, slow->latency.p999_ns / (fast->latency.p999_ns > 0 ? fast->latency.p999_ns : 1));
+    printf(" Max Latency     | %8.1f ns | %8.1f ns |   %.2fx\n\n", fast->latency.max_ns, slow->latency.max_ns, slow->latency.max_ns / (fast->latency.max_ns > 0 ? fast->latency.max_ns : 1));
 
     printf("--- Phase 2: Throughput Sweep ---\n");
-    printf(" Payload |     FAST ops/s |     SLOW ops/s |    FAST BW |    SLOW BW\n");
-    printf("---------+----------------+----------------+------------+------------\n");
+    printf(" Payload |     FAST ops/s |     SLOW ops/s |   FAST BW |   SLOW BW\n");
+    printf("---------+----------------+----------------+----------+----------\n");
     for (int i = 0; i < NUM_SWEEP_SIZES; i++) {
-        printf(" %6zuB | %10.0f/s | %10.0f/s | %6.1f MB/s | %6.1f MB/s\n",
+        printf(" %6zuB | %10.0f/s | %10.0f/s | %6.1f | %6.1f\n",
                SWEEP_SIZES[i],
                fast->ops_per_sec[i], slow->ops_per_sec[i],
                fast->payload_bw_mbps[i], slow->payload_bw_mbps[i]);
@@ -92,12 +97,18 @@ static void print_zc_comparison_table(benchmark_results_t *std_res, benchmark_re
     printf("     STANDARD (write) vs ZERO-COPY (zc_write/zc_send) [%s]       \n", std_res->mode_name);
     printf("=================================================================\n\n");
 
-    printf("--- Phase 1: Latency ---\n");
+    printf("--- Phase 1: Latency & Jitter ---\n");
     printf(" Metric          |     STANDARD |    ZERO-COPY |     Delta\n");
     printf("------------------+--------------+--------------+-----------\n");
     printf(" Avg Latency     | %8.1f ns | %8.1f ns | %+6.1f%%\n",
            std_res->latency.avg_ns, zc_res->latency.avg_ns,
            ((zc_res->latency.avg_ns - std_res->latency.avg_ns) / (std_res->latency.avg_ns > 0 ? std_res->latency.avg_ns : 1.0)) * 100.0);
+    printf(" Std Deviation   | %8.1f ns | %8.1f ns | %+6.1f%%\n",
+           std_res->latency.std_dev_ns, zc_res->latency.std_dev_ns,
+           ((zc_res->latency.std_dev_ns - std_res->latency.std_dev_ns) / (std_res->latency.std_dev_ns > 0 ? std_res->latency.std_dev_ns : 1.0)) * 100.0);
+    printf(" Jitter          | %8.1f ns | %8.1f ns | %+6.1f%%\n",
+           std_res->latency.jitter_ns, zc_res->latency.jitter_ns,
+           ((zc_res->latency.jitter_ns - std_res->latency.jitter_ns) / (std_res->latency.jitter_ns > 0 ? std_res->latency.jitter_ns : 1.0)) * 100.0);
     printf(" P99 Latency     | %8.1f ns | %8.1f ns | %+6.1f%%\n\n",
            std_res->latency.p99_ns, zc_res->latency.p99_ns,
            ((zc_res->latency.p99_ns - std_res->latency.p99_ns) / (std_res->latency.p99_ns > 0 ? std_res->latency.p99_ns : 1.0)) * 100.0);
@@ -117,6 +128,14 @@ static void print_zc_comparison_table(benchmark_results_t *std_res, benchmark_re
     printf(" STANDARD: %s  |  ZERO-COPY: %s\n\n",
            std_res->integrity_passed ? "PASSED" : "FAILED",
            zc_res->integrity_passed ? "PASSED" : "FAILED");
+
+    printf("--- Per-Function Timing ---\n");
+    printf(" Function              |     STANDARD |    ZERO-COPY\n");
+    printf("-----------------------+--------------+--------------\n");
+    printf(" write/zc_write        | %8.1f ns | %8.1f ns\n", std_res->func_timing.write_ns, zc_res->func_timing.write_ns);
+    printf(" read                  | %8.1f ns | %8.1f ns\n", std_res->func_timing.read_ns, zc_res->func_timing.read_ns);
+    printf(" zc_send (if ZC)       |         N/A | %8.1f ns\n", zc_res->func_timing.zc_send_ns);
+    printf(" Roundtrip             | %8.1f ns | %8.1f ns\n\n", std_res->func_timing.roundtrip_ns, zc_res->func_timing.roundtrip_ns);
 }
 
 // =============================================================================
@@ -125,46 +144,80 @@ static void print_zc_comparison_table(benchmark_results_t *std_res, benchmark_re
 int main() {
     setvbuf(stdout, NULL, _IONBF, 0);
 
-    // ---- 0. Run Zero-Copy Unit Tests ----
+    printf("\n");
+    printf("*****************************************************************\n");
+    printf("*     SHARED-HOST COMPREHENSIVE TEST & BENCHMARK SUITE           *\n");
+    printf("*     Version: Enhanced with per-function timing, jitter,       *\n");
+    printf("*     concurrent tests, and comprehensive metrics               *\n");
+    printf("*****************************************************************\n\n");
+
+    // ---- 0a. Run Zero-Copy Unit Tests ----
+    printf("[0a] Running Zero-Copy Unit Tests...\n");
     run_zc_unit_tests();
+    Sleep(200);
+
+    // ---- 0b. Run Edge Case Tests ----
+    printf("[0b] Running Edge Case Tests...\n");
+    run_edge_case_tests();
+    Sleep(200);
+
+    // ---- 0c. Run Error Handling & Memory Safety Tests ----
+    printf("[0c] Running Error Handling Tests...\n");
+    run_error_handling_tests();
+    Sleep(200);
+
+    printf("[0d] Running Memory Safety Tests...\n");
+    run_memory_safety_tests();
+    Sleep(200);
+
+    // ---- 0e. Run Stress & Concurrent Client Tests ----
+    printf("[0e] Running Stress Tests...\n");
+    run_stress_tests();
+    Sleep(200);
+
+    printf("[0f] Running Concurrent Client Tests...\n");
+    run_concurrent_client_tests();
+    Sleep(200);
 
     benchmark_results_t fast_results, slow_results;
     benchmark_results_t fast_zc_results, slow_zc_results;
 
-    printf("\n");
-    printf("*****************************************************************\n");
-    printf("*     SHARED-HOST DUAL-MODE TEST & BENCHMARK SUITE              *\n");
-    printf("*     Testing: STANDARD vs ZERO-COPY (zc_write / zc_send)        *\n");
-    printf("*****************************************************************\n\n");
-
-    // ---- Generate unique process-scoped port names to prevent handle collisions ----
-    DWORD pid = GetCurrentProcessId();
-    char p_fast_std[32], p_fast_zc[32], p_slow_std[32], p_slow_zc[32];
-    snprintf(p_fast_std, sizeof(p_fast_std), "t_fstd_%lu", (unsigned long)pid);
-    snprintf(p_fast_zc, sizeof(p_fast_zc), "t_fzc_%lu", (unsigned long)pid);
-    snprintf(p_slow_std, sizeof(p_slow_std), "t_sstd_%lu", (unsigned long)pid);
-    snprintf(p_slow_zc, sizeof(p_slow_zc), "t_szc_%lu", (unsigned long)pid);
-
     // ---- Run FAST mode (Standard) ----
-    run_mode(SH_FAST_CONNECTION, 0, p_fast_std, &fast_results);
+    printf("[1] Running FAST mode (Standard)...\n");
+    run_mode(SH_FAST_CONNECTION, 0, "test_fast_std", &fast_results);
+    run_function_timing_test(SH_FAST_CONNECTION, 0, "test_fast_std_timing", &fast_results.func_timing);
     Sleep(200);
 
     // ---- Run FAST mode (Zero-Copy) ----
-    run_mode(SH_FAST_CONNECTION, 1, p_fast_zc, &fast_zc_results);
+    printf("[2] Running FAST mode (Zero-Copy)...\n");
+    run_mode(SH_FAST_CONNECTION, 1, "test_fast_zc", &fast_zc_results);
+    run_function_timing_test(SH_FAST_CONNECTION, 1, "test_fast_zc_timing", &fast_zc_results.func_timing);
     Sleep(200);
 
     // ---- Run SLOW mode (Standard) ----
-    run_mode(SH_SLOW_CONNECTION, 0, p_slow_std, &slow_results);
+    printf("[3] Running SLOW mode (Standard)...\n");
+    run_mode(SH_SLOW_CONNECTION, 0, "test_slow_std", &slow_results);
+    run_function_timing_test(SH_SLOW_CONNECTION, 0, "test_slow_std_timing", &slow_results.func_timing);
     Sleep(200);
 
     // ---- Run SLOW mode (Zero-Copy) ----
-    run_mode(SH_SLOW_CONNECTION, 1, p_slow_zc, &slow_zc_results);
+    printf("[4] Running SLOW mode (Zero-Copy)...\n");
+    run_mode(SH_SLOW_CONNECTION, 1, "test_slow_zc", &slow_zc_results);
+    run_function_timing_test(SH_SLOW_CONNECTION, 1, "test_slow_zc_timing", &slow_zc_results.func_timing);
 
-    // ---- Standard FAST vs SLOW comparison ----
+    // ---- Print all comparison tables ----
+    printf("\n");
+    printf("*****************************************************************\n");
+    printf("*                    BENCHMARK RESULTS SUMMARY                  *\n");
+    printf("*****************************************************************\n");
+
+    // Standard FAST vs SLOW comparison
     print_comparison_table(&fast_results, &slow_results);
 
-    // ---- Zero-Copy vs Standard comparison ----
+    // Zero-Copy vs Standard comparison for FAST
     print_zc_comparison_table(&fast_results, &fast_zc_results);
+    
+    // Zero-Copy vs Standard comparison for SLOW
     print_zc_comparison_table(&slow_results, &slow_zc_results);
 
     // ---- Save to history ----
@@ -173,15 +226,16 @@ int main() {
     // ---- Historical regression comparison ----
     load_and_compare_history(&fast_results, &fast_zc_results, &slow_results, &slow_zc_results);
 
-    // ---- Run Iceoryx2-style Bullshit Test ----
-    Sleep(500);
-    run_bullshit_test();
+    // ---- Cleanup ----
+    if (fast_results.latency_samples) free(fast_results.latency_samples);
+    if (slow_results.latency_samples) free(slow_results.latency_samples);
+    if (fast_zc_results.latency_samples) free(fast_zc_results.latency_samples);
+    if (slow_zc_results.latency_samples) free(slow_zc_results.latency_samples);
 
-    printf("[SUCCESS] All benchmarks completed successfully.\n");
-    fflush(stdout);
+    printf("\n");
+    printf("*****************************************************************\n");
+    printf("*                    TEST SUITE COMPLETE                       *\n");
+    printf("*****************************************************************\n");
 
-    ExitProcess(0);
     return 0;
 }
-
-
