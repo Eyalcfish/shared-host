@@ -1,9 +1,11 @@
-#include "internal/shm_mapping.h"
-#include "shared_host.h"
+#include <internal/shm_mapping.h>
+#include <shared_host.h>
 #include <stdio.h>
 #include <stdint.h>
 
 #ifdef _WIN32
+    #include <dlgs.h>
+    #include <errhandlingapi.h>
     #include <windows.h>
     #include <memoryapi.h>
 #endif
@@ -73,5 +75,41 @@ sh_result_t sh_connect_to_shared_memory(const char* port, size_t size, HANDLE* b
         return SH_ERR_OOM;
     }
 
+    return SH_OK;
+}
+
+sh_result_t create_windows_event(const char* event_name, HANDLE* event_handle) {
+    *event_handle = CreateEventA(NULL, FALSE, FALSE, event_name);
+
+    if (*event_handle == NULL) {
+        return SH_ERR_OOM;
+    }
+
+    if (GetLastError() == ERROR_ALREADY_EXISTS) {
+        return SH_ERR_PORT_IN_USE;
+    }
+
+    return SH_OK;
+}
+
+sh_result_t connect_to_windows_event(const char* event_name, HANDLE* event_handle) {
+    *event_handle = OpenEventA(EVENT_ALL_ACCESS, FALSE, event_name);
+
+    if (*event_handle == NULL) {
+        return SH_ERR_OOM;
+    }
+
+    return SH_OK;
+}
+
+sh_result_t format_unique_name(const char* port, const char* category, size_t total_size, char** result) {
+    char* full_name = (char*)malloc(total_size + 21);
+
+    if (full_name == NULL) {
+        return SH_ERR_OOM;
+    }
+
+    snprintf(full_name, total_size+21, "Local\\shared_host_%s_%s", port, category);
+    *result = full_name;
     return SH_OK;
 }
