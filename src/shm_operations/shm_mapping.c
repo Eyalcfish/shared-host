@@ -79,7 +79,7 @@ sh_result_t sh_connect_to_shared_memory(const char* port, size_t size, HANDLE* b
 }
 
 sh_result_t create_windows_event(const char* event_name, HANDLE* event_handle) {
-    *event_handle = CreateEventA(NULL, TRUE, FALSE, event_name);
+    *event_handle = CreateEventA(NULL, FALSE, FALSE, event_name);
 
     if (*event_handle == NULL) {
         return SH_ERR_OOM;
