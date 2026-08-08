@@ -46,13 +46,7 @@ sh_result_t write_to_shared_host_connection_fast(shared_host_connection *connect
 		   buffer_size); // this copies the buffer to the current item address +
 						 // 2*sizeof(size_t) for headers
 
-#ifdef _WIN32
-	MemoryBarrier();
-#else
-	__sync_synchronize();
-#endif
-
-	connection->opp_shared_connection_header->last_item_offset = current_item_offset;
+	__atomic_store_n(&connection->opp_shared_connection_header->last_item_offset, current_item_offset, __ATOMIC_RELEASE); // should compile to a single mov in amd64 because of TSO, but for arm it should compile to STLR
 
 	return SH_OK;
 }
@@ -96,17 +90,14 @@ sh_result_t write_to_shared_host_connection_slow(shared_host_connection *connect
 		   buffer_size); // this copies the buffer to the current item address +
 						 // 2*sizeof(size_t) for headers
 
-#ifdef _WIN32
-	MemoryBarrier();
-#else
-	__sync_synchronize();
-#endif
-
-	connection->opp_shared_connection_header->last_item_offset = current_item_offset;
-
     #ifdef _WIN32
-   	SetEvent(connection->opp_event_handle);
+    if (&connection->opp_shared_connection_header->last_item_offset == connection->opp_shared_connection_header->current_item_offset) {
+       	SetEvent(connection->opp_event_handle);
+    }
     #endif
+
+	__atomic_store_n(&connection->opp_shared_connection_header->last_item_offset, current_item_offset, __ATOMIC_RELEASE); // should compile to a single mov in amd64 because of TSO, but for arm it should compile to STLR
+
 
 	return SH_OK;
 }
